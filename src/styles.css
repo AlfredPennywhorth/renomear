@@ -223,3 +223,37 @@ th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #
   .review-actions { flex-direction: column; }
   .review-actions button { width: 100%; }
 }
+
+
+.security-card {
+  margin: 18px 0;
+  padding: 20px;
+  border: 1px solid #d7dee3;
+  border-radius: 14px;
+  background: #fff;
+}
+.security-card h2 { margin: 0 0 8px; font-size: 20px; }
+.security-card p { color: #5d6973; line-height: 1.5; }
+.security-list {
+  margin: 14px 0;
+  padding-left: 20px;
+  color: #35434d;
+}
+.security-list li { margin: 8px 0; line-height: 1.45; }
+.security-consent {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid #cfdad6;
+  border-radius: 10px;
+  background: #f7faf8;
+  font-weight: 650;
+  color: #274b41;
+}
+.security-consent input { margin-top: 3px; }
+.security-footnote {
+  margin-bottom: 0;
+  font-size: 12px;
+  color: #6e7a83;
+}
