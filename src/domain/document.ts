@@ -8,6 +8,8 @@ export type ReviewStatus = 'PENDENTE' | 'OK' | 'REVISAR' | 'NAO_CONFORME'
 
 export type FieldStatus = 'OK' | 'REVISAR' | 'NAO_CONFORME' | 'NAO_AVALIADO'
 
+export type RenameState = 'NAO_RENOMEADO' | 'RENOMEADO' | 'ERRO'
+
 export interface DocumentValidation {
   id: string
   label: string
@@ -27,4 +29,6 @@ export interface AnalyzedDocument {
   confidence: number | null
   reviewStatus: ReviewStatus
   validations: DocumentValidation[]
+  renameState?: RenameState
+  lastRenameError?: string | null
 }
