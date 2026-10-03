@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import ReviewPanel from './components/ReviewPanel'
 import type { AnalyzedDocument } from './domain/document'
 import { listSupportedDocuments } from './services/local-files'
 
@@ -14,8 +15,11 @@ type PickerWindow = typeof window & {
 function App() {
   const [folderName, setFolderName] = useState<string | null>(null)
   const [documents, setDocuments] = useState<AnalyzedDocument[]>([])
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [message, setMessage] = useState('Nenhuma pasta selecionada.')
   const [busy, setBusy] = useState(false)
+
+  const selectedDocument = documents.find((document) => document.id === selectedId) ?? null
 
   const counts = useMemo(() => ({
     total: documents.length,
@@ -39,6 +43,7 @@ function App() {
 
       setFolderName(directory.name)
       setDocuments(listed)
+      setSelectedId(null)
       setMessage(
         listed.length === 0
           ? 'Nenhum PDF ou arquivo de imagem suportado foi encontrado.'
@@ -54,6 +59,15 @@ function App() {
       setBusy(false)
     }
   }
+
+  const updateDocument = (updated: AnalyzedDocument) => {
+    setDocuments((current) =>
+      current.map((document) => document.id === updated.id ? updated : document),
+    )
+  }
+
+  const statusClass = (status: AnalyzedDocument['reviewStatus']) =>
+    status.toLowerCase().replace('_', '-')
 
   return (
     <main className="shell">
@@ -108,6 +122,7 @@ function App() {
                     <th>Prontuário</th>
                     <th>Sequência</th>
                     <th>Status</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -117,7 +132,12 @@ function App() {
                       <td>{document.kind ?? 'A identificar'}</td>
                       <td>{document.prontuario ?? '—'}</td>
                       <td>{document.numeroDocumento ?? '—'}</td>
-                      <td><span className="badge pending">{document.reviewStatus}</span></td>
+                      <td><span className={`badge ${statusClass(document.reviewStatus)}`}>{document.reviewStatus}</span></td>
+                      <td>
+                        <button className="table-action" type="button" onClick={() => setSelectedId(document.id)}>
+                          Revisar
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -126,6 +146,17 @@ function App() {
           )}
         </section>
       </section>
+
+      {selectedDocument && (
+        <>
+          <button className="drawer-backdrop" aria-label="Fechar revisão" onClick={() => setSelectedId(null)} />
+          <ReviewPanel
+            document={selectedDocument}
+            onClose={() => setSelectedId(null)}
+            onChange={updateDocument}
+          />
+        </>
+      )}
     </main>
   )
 }
