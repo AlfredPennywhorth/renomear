@@ -32,13 +32,12 @@ function SecurityNotice({ accepted, onAcceptedChange }: Props) {
           onChange={(event) => onAcceptedChange(event.target.checked)}
         />
         <span>
-          Declaro que estou autorizado a tratar estes documentos e que estou usando um ambiente adequado para dados pessoais.
+          Li e estou ciente dos cuidados de segurança para o tratamento destes documentos e confirmo que estou usando um ambiente adequado para dados pessoais.
         </span>
       </label>
 
       <p className="security-footnote">
-        Este recurso ajuda a aplicar medidas de privacidade e segurança, mas não substitui a política de proteção de dados,
-        a definição da base legal, a gestão de incidentes nem as demais obrigações da organização.
+        Este aviso tem caráter de orientação e conscientização. A autorização para o tratamento dos dados permanece vinculada à documentação e aos procedimentos institucionais aplicáveis. O recurso não substitui a política de proteção de dados, a gestão de incidentes nem as demais obrigações da organização.
       </p>
     </section>
   )
