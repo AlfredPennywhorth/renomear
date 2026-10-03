@@ -1,0 +1,142 @@
+import type { AnalyzedDocument, DocumentKind, ReviewStatus } from '../domain/document'
+import { normalizeProntuario } from '../domain/prontuario'
+import { suggestFileName } from '../services/naming'
+
+type Props = {
+  document: AnalyzedDocument
+  onClose: () => void
+  onChange: (document: AnalyzedDocument) => void
+}
+
+const kindOptions: Array<{ value: DocumentKind; label: string }> = [
+  { value: 'ENVELOPE', label: 'Envelope — frente' },
+  { value: 'FICHA_C1', label: 'Ficha C1' },
+  { value: 'RECIBO_ATENDIMENTO', label: 'Recibo de atendimento' },
+  { value: 'NAO_PADRONIZADO', label: 'Documento não padronizado' },
+]
+
+function ReviewPanel({ document, onClose, onChange }: Props) {
+  const update = (patch: Partial<AnalyzedDocument>) => {
+    const next = { ...document, ...patch }
+    next.suggestedName = suggestFileName(next)
+    onChange(next)
+  }
+
+  const normalizeAndUpdateProntuario = (value: string) => {
+    const normalized = normalizeProntuario(value)
+    update({
+      prontuario: normalized ?? value,
+      reviewStatus: normalized ? document.reviewStatus : 'REVISAR',
+    })
+  }
+
+  const setStatus = (status: ReviewStatus) => update({ reviewStatus: status })
+
+  return (
+    <aside className="review-drawer" aria-label="Revisão do documento">
+      <div className="review-header">
+        <div>
+          <p className="eyebrow">Revisão manual</p>
+          <h2>{document.originalName}</h2>
+        </div>
+        <button className="secondary-button" type="button" onClick={onClose}>Fechar</button>
+      </div>
+
+      <div className="review-grid">
+        <label>
+          Tipo documental
+          <select
+            value={document.kind ?? ''}
+            onChange={(event) => update({ kind: (event.target.value || null) as DocumentKind | null })}
+          >
+            <option value="">Selecione</option>
+            {kindOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          Prontuário
+          <input
+            inputMode="numeric"
+            value={document.prontuario ?? ''}
+            placeholder="000000"
+            onChange={(event) => update({ prontuario: event.target.value })}
+            onBlur={(event) => normalizeAndUpdateProntuario(event.target.value)}
+          />
+          <small>Até 6 algarismos; zeros à esquerda são completados automaticamente.</small>
+        </label>
+
+        <label>
+          Sequência / nº documento
+          <input
+            inputMode="numeric"
+            value={document.numeroDocumento ?? ''}
+            placeholder="Ex.: 054831"
+            onChange={(event) => update({ numeroDocumento: event.target.value })}
+          />
+        </label>
+
+        <label>
+          Data do documento
+          <input
+            type="text"
+            inputMode="numeric"
+            value={document.documentDate ?? ''}
+            placeholder="DD/MM/AAAA"
+            onChange={(event) => update({ documentDate: event.target.value })}
+          />
+        </label>
+      </div>
+
+      <section className="rename-preview">
+        <span>Nome proposto</span>
+        <strong>{document.suggestedName ?? 'Preencha tipo e prontuário para gerar o nome.'}</strong>
+      </section>
+
+      <section className="validation-section">
+        <div className="section-heading">
+          <div>
+            <h3>Verificações</h3>
+            <p>As verificações automáticas aparecerão aqui quando o classificador/OCR for integrado.</p>
+          </div>
+        </div>
+
+        {document.validations.length === 0 ? (
+          <div className="validation-placeholder">
+            <span>Sem verificações automáticas ainda.</span>
+            <small>O documento pode ser marcado manualmente como OK, Revisar ou Não conforme.</small>
+          </div>
+        ) : (
+          <ul className="validation-list">
+            {document.validations.map((item) => (
+              <li key={item.id}>
+                <div>
+                  <strong>{item.label}</strong>
+                  <span>{item.value ?? 'Não identificado'}</span>
+                </div>
+                <span className={`badge ${item.status.toLowerCase().replace('_', '-')}`}>{item.status}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <div className="review-actions">
+        <button type="button" className="review-button" onClick={() => setStatus('REVISAR')}>Marcar para revisar</button>
+        <button type="button" className="danger-button" onClick={() => setStatus('NAO_CONFORME')}>Não conforme</button>
+        <button
+          type="button"
+          onClick={() => setStatus('OK')}
+          disabled={!document.suggestedName}
+          title={!document.suggestedName ? 'Preencha os campos necessários antes de aprovar.' : undefined}
+        >
+          Aprovar como OK
+        </button>
+      </div>
+    </aside>
+  )
+}
+
+export default ReviewPanel
