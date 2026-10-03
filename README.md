@@ -39,6 +39,18 @@ A lista será calibrada com amostras reais.
 
 A renomeação direta de arquivos na pasta escolhida, sem instalação local, depende das APIs de acesso ao sistema de arquivos disponíveis no navegador. O MVP priorizará navegadores Chromium compatíveis com a File System Access API e terá estratégia de fallback para ambientes sem suporte.
 
+## LGPD e segurança
+
+- Processamento local por padrão; documentos e dados extraídos não devem ser enviados a serviços externos no MVP.
+- O usuário deve confirmar autorização e condições mínimas de segurança antes de selecionar a pasta.
+- Não usar computador público/compartilhado nem pasta sincronizada com nuvem quando a política exigir permanência exclusiva na máquina.
+- Evitar coleta e exposição desnecessárias: nomes finais usam apenas os identificadores operacionais necessários.
+- Não registrar conteúdo documental, prontuários ou nomes de arquivos em telemetria/logs remotos.
+- Resultado incerto nunca deve ser aprovado automaticamente; deve permanecer como REVISAR.
+- O projeto adota privacidade desde a concepção, mas conformidade com a LGPD depende também de governança institucional, base legal, retenção, resposta a incidentes e demais controles organizacionais.
+
+Detalhamento: `docs/LGPD_SEGURANCA.md`.
+
 ## Governança
 
 - `main`: versão estável.
