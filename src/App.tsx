@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import DocumentPreview from './components/DocumentPreview'
 import ReviewPanel from './components/ReviewPanel'
+import SecurityNotice from './components/SecurityNotice'
 import type { AnalyzedDocument } from './domain/document'
 import { listSupportedDocuments } from './services/local-files'
 import { renameApprovedDocuments, type DirectoryHandleLike } from './services/local-rename'
@@ -17,6 +18,7 @@ function App() {
   const [message, setMessage] = useState('Nenhuma pasta selecionada.')
   const [busy, setBusy] = useState(false)
   const [renameBusy, setRenameBusy] = useState(false)
+  const [securityAccepted, setSecurityAccepted] = useState(false)
 
   const selectedDocument = documents.find((document) => document.id === selectedId) ?? null
   const previewDocument = documents.find((document) => document.id === previewId) ?? null
@@ -30,6 +32,10 @@ function App() {
   }), [documents])
 
   const selectFolder = async () => {
+    if (!securityAccepted) {
+      setMessage('Confirme as regras de segurança e autorização antes de selecionar a pasta.')
+      return
+    }
     const picker = (window as PickerWindow).showDirectoryPicker
     if (!picker) {
       setMessage('Este navegador não oferece acesso direto a pastas. O modo alternativo será implementado antes do MVP.')
@@ -138,15 +144,16 @@ function App() {
                 {renameBusy ? 'Renomeando…' : 'Renomear aprovados'}
               </button>
             )}
-            <button type="button" onClick={selectFolder} disabled={busy || renameBusy}>
+            <button type="button" onClick={selectFolder} disabled={busy || renameBusy || !securityAccepted}>
               {busy ? 'Lendo pasta…' : directory ? 'Trocar pasta' : 'Selecionar pasta'}
             </button>
           </div>
         </header>
 
+        <SecurityNotice accepted={securityAccepted} onAcceptedChange={setSecurityAccepted} />
+
         <div className="privacy-note" role="status">
-          <strong>Privacidade:</strong> leitura, visualização e renomeação são feitas na pasta escolhida no próprio computador.
-          Nenhum conteúdo é enviado ao servidor.
+          <strong>Privacidade:</strong> leitura, visualização e renomeação são feitas na pasta escolhida no próprio computador. Nenhum conteúdo é enviado ao servidor. Se a política exigir permanência exclusiva na máquina, não selecione pasta sincronizada com nuvem.
         </div>
 
         <section className="summary-grid" aria-label="Resumo">
