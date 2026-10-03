@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { DirectoryHandleLike } from '../services/local-rename'
+import '../preview.css'
 
 type Props = {
   directory: DirectoryHandleLike
