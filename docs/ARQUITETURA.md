@@ -4,6 +4,18 @@
 
 O Renomear deve ser desenhado para que documentos reais permaneçam no dispositivo do usuário. O frontend pode ser hospedado como aplicação estática, mas imagens e PDFs não devem ser enviados ao servidor para classificação ou OCR.
 
+## Controles de privacidade e segurança
+
+- Aplicar privacidade e segurança desde a concepção do produto.
+- Solicitar somente acesso à pasta explicitamente escolhida.
+- Manter dados extraídos em memória de sessão; não persistir sem necessidade aprovada.
+- Não usar analytics/logs remotos para nomes de arquivos, prontuários, OCR ou conteúdo documental.
+- Revogar URLs temporárias de visualização ao fechar/trocar arquivo.
+- Bloquear integração externa de OCR/IA por padrão.
+- Exigir aceite do aviso de segurança antes do acesso à pasta.
+- Alertar sobre uso de pasta sincronizada em nuvem quando a política exigir armazenamento exclusivamente local.
+- Preservar o arquivo original diante de falha de renomeação e impedir sobrescrita silenciosa.
+
 ## Pipeline previsto
 
 1. Seleção de pasta.
