@@ -19,6 +19,10 @@ Este documento descreve medidas técnicas e operacionais do projeto. Ele não su
 9. **Confirmação antes de alteração em lote.** Arquivos só podem ser renomeados após aprovação explícita.
 10. **Sem uso de serviços externos de IA/OCR no MVP.** Qualquer futura integração externa exige reavaliação de privacidade e segurança.
 
+## Aviso ao usuário
+
+O aviso exibido pelo Renomear tem finalidade de conscientização e reforço operacional. Ele não cria, substitui nem renova a autorização para tratamento de dados pessoais. Quando a documentação institucional já contiver autorização própria para o tratamento, ela continua sendo a referência aplicável. O sistema apenas recorda os cuidados necessários durante o manuseio dos arquivos.
+
 ## Regras de uso para o operador
 
 - Trabalhar apenas com documentos necessários à atividade autorizada.
