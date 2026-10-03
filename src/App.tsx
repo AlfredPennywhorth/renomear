@@ -1,36 +1,36 @@
 import { useMemo, useState } from 'react'
+import DocumentPreview from './components/DocumentPreview'
 import ReviewPanel from './components/ReviewPanel'
 import type { AnalyzedDocument } from './domain/document'
 import { listSupportedDocuments } from './services/local-files'
-
-type DirectoryHandle = {
-  name: string
-  values: () => AsyncIterableIterator<unknown>
-}
+import { renameApprovedDocuments, type DirectoryHandleLike } from './services/local-rename'
 
 type PickerWindow = typeof window & {
-  showDirectoryPicker?: () => Promise<DirectoryHandle>
+  showDirectoryPicker?: () => Promise<DirectoryHandleLike>
 }
 
 function App() {
-  const [folderName, setFolderName] = useState<string | null>(null)
+  const [directory, setDirectory] = useState<DirectoryHandleLike | null>(null)
   const [documents, setDocuments] = useState<AnalyzedDocument[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [previewId, setPreviewId] = useState<string | null>(null)
   const [message, setMessage] = useState('Nenhuma pasta selecionada.')
   const [busy, setBusy] = useState(false)
+  const [renameBusy, setRenameBusy] = useState(false)
 
   const selectedDocument = documents.find((document) => document.id === selectedId) ?? null
+  const previewDocument = documents.find((document) => document.id === previewId) ?? null
 
   const counts = useMemo(() => ({
     total: documents.length,
     pending: documents.filter((item) => item.reviewStatus === 'PENDENTE').length,
     review: documents.filter((item) => item.reviewStatus === 'REVISAR').length,
     ok: documents.filter((item) => item.reviewStatus === 'OK').length,
+    renamed: documents.filter((item) => item.renameState === 'RENOMEADO').length,
   }), [documents])
 
   const selectFolder = async () => {
     const picker = (window as PickerWindow).showDirectoryPicker
-
     if (!picker) {
       setMessage('Este navegador não oferece acesso direto a pastas. O modo alternativo será implementado antes do MVP.')
       return
@@ -38,17 +38,15 @@ function App() {
 
     try {
       setBusy(true)
-      const directory = await picker()
-      const listed = await listSupportedDocuments(directory)
-
-      setFolderName(directory.name)
+      const selectedDirectory = await picker()
+      const listed = await listSupportedDocuments(selectedDirectory)
+      setDirectory(selectedDirectory)
       setDocuments(listed)
       setSelectedId(null)
-      setMessage(
-        listed.length === 0
-          ? 'Nenhum PDF ou arquivo de imagem suportado foi encontrado.'
-          : `${listed.length} documento(s) encontrado(s). Nenhum arquivo foi enviado para servidor.`,
-      )
+      setPreviewId(null)
+      setMessage(listed.length === 0
+        ? 'Nenhum PDF ou arquivo de imagem suportado foi encontrado.'
+        : String(listed.length) + ' documento(s) encontrado(s). Nenhum arquivo foi enviado para servidor.')
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         setMessage('Seleção cancelada.')
@@ -61,9 +59,62 @@ function App() {
   }
 
   const updateDocument = (updated: AnalyzedDocument) => {
-    setDocuments((current) =>
-      current.map((document) => document.id === updated.id ? updated : document),
+    setDocuments((current) => current.map((document) => document.id === updated.id ? updated : document))
+  }
+
+  const renameApproved = async () => {
+    if (!directory) return
+    const candidates = documents.filter((document) =>
+      document.reviewStatus === 'OK' &&
+      document.suggestedName &&
+      document.originalName !== document.suggestedName
     )
+
+    if (candidates.length === 0) {
+      setMessage('Não há documentos aprovados aguardando renomeação.')
+      return
+    }
+
+    const confirmed = window.confirm(
+      'Renomear ' + String(candidates.length) + ' arquivo(s) aprovado(s) nesta pasta? ' +
+      'O sistema verificará conflitos antes de alterar cada arquivo.'
+    )
+    if (!confirmed) return
+
+    try {
+      setRenameBusy(true)
+      const results = await renameApprovedDocuments(directory, candidates)
+      const byId = new Map(results.map((result) => [result.id, result]))
+
+      setDocuments((current) => current.map((document) => {
+        const result = byId.get(document.id)
+        if (!result) return document
+        if (result.status === 'RENOMEADO') {
+          return {
+            ...document,
+            originalName: result.to,
+            renameState: 'RENOMEADO' as const,
+            lastRenameError: null,
+          }
+        }
+        if (result.status === 'ERRO') {
+          return {
+            ...document,
+            renameState: 'ERRO' as const,
+            lastRenameError: result.error ?? 'Falha ao renomear.',
+          }
+        }
+        return document
+      }))
+
+      const renamed = results.filter((result) => result.status === 'RENOMEADO').length
+      const errors = results.filter((result) => result.status === 'ERRO').length
+      setMessage(errors
+        ? String(renamed) + ' arquivo(s) renomeado(s); ' + String(errors) + ' requer(em) revisão.'
+        : String(renamed) + ' arquivo(s) renomeado(s) com sucesso.')
+    } finally {
+      setRenameBusy(false)
+    }
   }
 
   const statusClass = (status: AnalyzedDocument['reviewStatus']) =>
@@ -81,13 +132,20 @@ function App() {
               Os arquivos permanecem no seu computador.
             </p>
           </div>
-          <button type="button" onClick={selectFolder} disabled={busy}>
-            {busy ? 'Lendo pasta…' : folderName ? 'Trocar pasta' : 'Selecionar pasta'}
-          </button>
+          <div className="hero-actions">
+            {directory && (
+              <button type="button" className="secondary-button" onClick={renameApproved} disabled={renameBusy}>
+                {renameBusy ? 'Renomeando…' : 'Renomear aprovados'}
+              </button>
+            )}
+            <button type="button" onClick={selectFolder} disabled={busy || renameBusy}>
+              {busy ? 'Lendo pasta…' : directory ? 'Trocar pasta' : 'Selecionar pasta'}
+            </button>
+          </div>
         </header>
 
         <div className="privacy-note" role="status">
-          <strong>Privacidade:</strong> esta etapa apenas enumera arquivos locais compatíveis.
+          <strong>Privacidade:</strong> leitura, visualização e renomeação são feitas na pasta escolhida no próprio computador.
           Nenhum conteúdo é enviado ao servidor.
         </div>
 
@@ -96,13 +154,14 @@ function App() {
           <article><span>Pendentes</span><strong>{counts.pending}</strong></article>
           <article><span>Revisar</span><strong>{counts.review}</strong></article>
           <article><span>OK</span><strong>{counts.ok}</strong></article>
+          <article><span>Renomeados</span><strong>{counts.renamed}</strong></article>
         </section>
 
         <section className="panel">
           <div className="panel-heading">
             <div>
               <h2>Fila de documentos</h2>
-              <p>{folderName ? `Pasta: ${folderName}` : 'Selecione uma pasta para começar.'}</p>
+              <p>{directory ? 'Pasta: ' + directory.name : 'Selecione uma pasta para começar.'}</p>
             </div>
             <span className="status-pill">{message}</span>
           </div>
@@ -118,10 +177,10 @@ function App() {
                 <thead>
                   <tr>
                     <th>Arquivo atual</th>
-                    <th>Tipo</th>
+                    <th>Nome proposto</th>
                     <th>Prontuário</th>
-                    <th>Sequência</th>
                     <th>Status</th>
+                    <th>Operação</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -129,11 +188,20 @@ function App() {
                   {documents.map((document) => (
                     <tr key={document.id}>
                       <td className="file-name">{document.originalName}</td>
-                      <td>{document.kind ?? 'A identificar'}</td>
+                      <td>{document.suggestedName ?? '—'}</td>
                       <td>{document.prontuario ?? '—'}</td>
-                      <td>{document.numeroDocumento ?? '—'}</td>
-                      <td><span className={`badge ${statusClass(document.reviewStatus)}`}>{document.reviewStatus}</span></td>
+                      <td><span className={'badge ' + statusClass(document.reviewStatus)}>{document.reviewStatus}</span></td>
                       <td>
+                        {document.renameState === 'RENOMEADO' && <span className="badge ok">RENOMEADO</span>}
+                        {document.renameState === 'ERRO' && <span className="badge nao-conforme" title={document.lastRenameError ?? undefined}>ERRO</span>}
+                        {!document.renameState && '—'}
+                      </td>
+                      <td className="row-actions">
+                        {directory && (
+                          <button className="table-action" type="button" onClick={() => setPreviewId(document.id)}>
+                            Visualizar
+                          </button>
+                        )}
                         <button className="table-action" type="button" onClick={() => setSelectedId(document.id)}>
                           Revisar
                         </button>
@@ -150,11 +218,14 @@ function App() {
       {selectedDocument && (
         <>
           <button className="drawer-backdrop" aria-label="Fechar revisão" onClick={() => setSelectedId(null)} />
-          <ReviewPanel
-            document={selectedDocument}
-            onClose={() => setSelectedId(null)}
-            onChange={updateDocument}
-          />
+          <ReviewPanel document={selectedDocument} onClose={() => setSelectedId(null)} onChange={updateDocument} />
+        </>
+      )}
+
+      {directory && previewDocument && (
+        <>
+          <button className="modal-backdrop" aria-label="Fechar visualização" onClick={() => setPreviewId(null)} />
+          <DocumentPreview directory={directory} fileName={previewDocument.originalName} onClose={() => setPreviewId(null)} />
         </>
       )}
     </main>
