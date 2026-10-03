@@ -16,7 +16,7 @@ button {
   background: #183f36;
   color: white;
 }
-button:disabled { cursor: wait; opacity: .65; }
+button:disabled { cursor: not-allowed; opacity: .55; }
 .shell { min-height: 100vh; padding: 32px 20px; }
 .workspace { width: min(1180px, 100%); margin: 0 auto; }
 .hero {
@@ -95,7 +95,123 @@ th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #
   font-size: 11px;
   font-weight: 800;
 }
-.badge.pending { background: #eef1f3; color: #596773; }
+.badge.pendente, .badge.nao-avaliado { background: #eef1f3; color: #596773; }
+.badge.ok { background: #e7f5ee; color: #17653f; }
+.badge.revisar { background: #fff3d8; color: #825d00; }
+.badge.nao-conforme { background: #fde9e7; color: #96342d; }
+.table-action {
+  padding: 7px 10px;
+  background: #eef3f1;
+  color: #244a40;
+  font-size: 12px;
+}
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  background: rgba(20, 30, 35, .34);
+  cursor: default;
+}
+.review-drawer {
+  position: fixed;
+  z-index: 30;
+  top: 0;
+  right: 0;
+  width: min(620px, 100%);
+  height: 100vh;
+  overflow-y: auto;
+  padding: 24px;
+  background: #fff;
+  box-shadow: -18px 0 50px rgba(0, 0, 0, .16);
+}
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e5eaed;
+}
+.review-header h2 { margin: 0; font-size: 20px; overflow-wrap: anywhere; }
+.secondary-button {
+  background: #eef1f3;
+  color: #43515d;
+}
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 22px 0;
+}
+.review-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 750;
+  color: #36444e;
+}
+.review-grid input,
+.review-grid select {
+  width: 100%;
+  border: 1px solid #cfd8de;
+  border-radius: 9px;
+  padding: 11px 12px;
+  background: white;
+  color: #18212f;
+}
+.review-grid small {
+  color: #75818a;
+  font-weight: 400;
+  line-height: 1.35;
+}
+.rename-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 16px;
+  border: 1px solid #cfdad6;
+  border-radius: 12px;
+  background: #f7faf8;
+}
+.rename-preview span { color: #5f6f75; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+.rename-preview strong { overflow-wrap: anywhere; }
+.validation-section { margin-top: 24px; }
+.section-heading h3 { margin: 0 0 5px; }
+.section-heading p { margin: 0; color: #71808a; font-size: 13px; line-height: 1.45; }
+.validation-placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px dashed #cfd8de;
+  border-radius: 10px;
+  color: #5c6a74;
+}
+.validation-placeholder small { color: #7b8790; }
+.validation-list { list-style: none; padding: 0; margin: 12px 0 0; border: 1px solid #e3e8eb; border-radius: 10px; overflow: hidden; }
+.validation-list li { display: flex; justify-content: space-between; gap: 14px; align-items: center; padding: 13px; border-bottom: 1px solid #edf0f2; }
+.validation-list li:last-child { border-bottom: 0; }
+.validation-list li div { display: flex; flex-direction: column; gap: 4px; }
+.validation-list li span { color: #6d7a83; font-size: 12px; }
+.review-actions {
+  position: sticky;
+  bottom: -24px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin: 28px -24px -24px;
+  padding: 16px 24px;
+  border-top: 1px solid #e3e8eb;
+  background: rgba(255,255,255,.96);
+  backdrop-filter: blur(8px);
+}
+.review-button { background: #fff3d8; color: #775500; }
+.danger-button { background: #fde9e7; color: #8f302a; }
 
 @media (max-width: 760px) {
   .shell { padding: 20px 12px; }
@@ -103,4 +219,7 @@ th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #
   .hero button { width: 100%; }
   .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .status-pill { max-width: none; border-radius: 10px; }
+  .review-grid { grid-template-columns: 1fr; }
+  .review-actions { flex-direction: column; }
+  .review-actions button { width: 100%; }
 }
