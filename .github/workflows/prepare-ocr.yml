@@ -37,7 +37,10 @@ jobs:
           mkdir -p public/ocr/core public/ocr/lang public/pdf
 
           cp node_modules/tesseract.js/dist/worker.min.js public/ocr/worker.min.js
-          cp node_modules/tesseract.js-core/tesseract-core* public/ocr/core/
+          CORE_FILE="$(find node_modules/.pnpm -type f -name 'tesseract-core.wasm.js' | head -n 1)"
+          test -n "$CORE_FILE"
+          CORE_DIR="$(dirname "$CORE_FILE")"
+          cp "$CORE_DIR"/tesseract-core* public/ocr/core/
 
           LANG_FILE="$(find node_modules/@tesseract.js-data/por -type f -name 'por.traineddata.gz' | head -n 1)"
           test -n "$LANG_FILE"
