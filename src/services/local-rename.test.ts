@@ -141,6 +141,21 @@ describe('renameApprovedDocuments', () => {
     expect(removed).toEqual([])
   })
 
+  it('permite renomeação automática de item em revisão quando explicitamente autorizado', async () => {
+    const original = new Uint8Array([1, 2, 3, 4])
+    const { directory, files } = fakeDirectory({ 'origem.jpg': original })
+
+    const [result] = await renameApprovedDocuments(
+      directory,
+      [makeDocument({ reviewStatus: 'REVISAR' })],
+      { requireOk: false },
+    )
+
+    expect(result.status).toBe('RENOMEADO')
+    expect(files.has('origem.jpg')).toBe(false)
+    expect(files.has('001234_c1_frente.jpg')).toBe(true)
+  })
+
   it('não escreve quando a permissão readwrite é negada', async () => {
     const original = new Uint8Array([1, 2, 3, 4])
     const { directory, files, removed } = fakeDirectory({ 'origem.jpg': original })
