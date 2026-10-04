@@ -63,7 +63,7 @@ function classify(text: string): DocumentKind | null {
   return null
 }
 
-function extractFields(rawText: string): OcrFields {
+export function extractOcrFields(rawText: string): OcrFields {
   const text = normalizeText(rawText)
   const kind = classify(rawText)
 
@@ -87,19 +87,23 @@ function extractFields(rawText: string): OcrFields {
     /\b(\d{2}[\/.\-]\d{2}[\/.\-]\d{2})\b/,
   ])
 
-  const normalizedDate = (meetingDate ?? anyDate)?.replaceAll('.', '/').replaceAll('-', '/') ?? null
+  const allDates = [...text.matchAll(/\b\d{2}[\/.\-]\d{2}[\/.\-]\d{2,4}\b/g)]
+    .map((match) => match[0].replaceAll('.', '/').replaceAll('-', '/'))
+  const uniqueDates = [...new Set(allDates)]
+  const normalizedDate = meetingDate
+    ? meetingDate.replaceAll('.', '/').replaceAll('-', '/')
+    : uniqueDates.length === 1
+      ? uniqueDates[0]
+      : null
 
   return {
     kind,
     prontuario: prontuarioRaw ? normalizeProntuario(prontuarioRaw) : null,
     numeroDocumento: sequence,
     documentDate: normalizedDate,
-    caseMode:
-      /\bEMERGENCIA\b/.test(text)
-        ? 'EMERGENCIA'
-        : /\bREUNIAO\b/.test(text)
-          ? 'REUNIAO'
-          : null,
+    // Os formulários C1 imprimem as duas palavras (Reunião/Emergência).
+    // Presença textual, portanto, não prova qual opção foi marcada.
+    caseMode: null,
     isMonthly: /\bMENSAL\b/.test(text),
   }
 }
@@ -207,7 +211,7 @@ export async function analyzeDocumentsWithLocalOcr(
         const input = await fileToCanvas(file)
         const result = await worker.recognize(input, { rotateAuto: true })
         const confidence = Number.isFinite(result.data.confidence) ? result.data.confidence : 0
-        const fields = extractFields(result.data.text)
+        const fields = extractOcrFields(result.data.text)
 
         const next: AnalyzedDocument = {
           ...current,
