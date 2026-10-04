@@ -9,6 +9,7 @@ type WritableLike = {
 type FileHandleLike = {
   getFile: () => Promise<File>
   createWritable: () => Promise<WritableLike>
+  move?: (name: string) => Promise<void>
 }
 
 export type DirectoryHandleLike = {
@@ -136,8 +137,6 @@ async function renameOne(
     return { id: document.id, from: document.originalName, to: target, status: 'IGNORADO' }
   }
 
-  // A checagem é repetida imediatamente antes da criação. A File System Access API
-  // não oferece create-exclusive; portanto nunca apagamos o destino em caso de erro.
   if (await fileExists(directory, target)) {
     return {
       id: document.id,
@@ -160,47 +159,45 @@ async function renameOne(
     }
   }
 
-  if (await fileExists(directory, target)) {
-    return {
-      id: document.id,
-      from: document.originalName,
-      to: target,
-      status: 'ERRO',
-      error: 'O nome de destino passou a existir durante a operação. Nenhum arquivo foi alterado.',
-    }
-  }
-
-  let targetHandle: FileHandleLike
-  try {
-    targetHandle = await directory.getFileHandle(target, { create: true })
-  } catch (error) {
-    return {
-      id: document.id,
-      from: document.originalName,
-      to: target,
-      status: 'ERRO',
-      error: error instanceof Error ? error.message : 'Não foi possível criar o arquivo de destino.',
-    }
-  }
-
+  const content = await contentForRename(document, sourceFile)
+  const tempName = '.renomear-' + crypto.randomUUID() + '.tmp'
+  let tempHandle: FileHandleLike | null = null
   let writable: WritableLike | null = null
+
   try {
-    const content = await contentForRename(document, sourceFile)
-    writable = await targetHandle.createWritable()
+    tempHandle = await directory.getFileHandle(tempName, { create: true })
+    writable = await tempHandle.createWritable()
     await writable.write(content)
     await writable.close()
     writable = null
 
-    const writtenFile = await targetHandle.getFile()
-    const integrityOk = await verifySameContent(content, writtenFile)
-    if (!integrityOk) {
-      return {
-        id: document.id,
-        from: document.originalName,
-        to: target,
-        status: 'ERRO',
-        error: 'A cópia não passou pela verificação de integridade. O arquivo original foi preservado.',
-      }
+    const tempFile = await tempHandle.getFile()
+    if (!(await verifySameContent(content, tempFile))) {
+      throw new Error('A cópia temporária não passou pela verificação de integridade.')
+    }
+
+    if (typeof tempHandle.move !== 'function') {
+      throw new Error(
+        'Este navegador não oferece renomeação atômica segura. O arquivo original foi preservado.',
+      )
+    }
+
+    // O destino nunca é aberto para escrita. A promoção do arquivo temporário usa
+    // uma operação de move do próprio handle, evitando sobrescrever silenciosamente
+    // um arquivo que apareça entre a checagem e a gravação.
+    if (await fileExists(directory, target)) {
+      throw new Error('O nome de destino passou a existir durante a operação.')
+    }
+
+    await tempHandle.move(target)
+    tempHandle = null
+
+    const writtenHandle = await directory.getFileHandle(target)
+    const writtenFile = await writtenHandle.getFile()
+    if (!(await verifySameContent(content, writtenFile))) {
+      throw new Error(
+        'O arquivo promovido não passou pela verificação de integridade. O original foi preservado.',
+      )
     }
 
     await directory.removeEntry(document.originalName)
@@ -210,9 +207,18 @@ async function renameOne(
       try {
         await writable.abort()
       } catch {
-        // Melhor esforço. O original permanece intacto enquanto removeEntry não ocorrer.
+        // Melhor esforço; o arquivo original ainda não foi removido.
       }
     }
+
+    if (tempHandle) {
+      try {
+        await directory.removeEntry(tempName)
+      } catch {
+        // Melhor esforço para limpar temporário; nunca removemos o original aqui.
+      }
+    }
+
     return {
       id: document.id,
       from: document.originalName,
