@@ -6,7 +6,7 @@ import QualityDashboard from './components/QualityDashboard'
 import SecurityNotice from './components/SecurityNotice'
 import type { AnalyzedDocument } from './domain/document'
 import { listSupportedDocuments } from './services/local-files'
-import { analyzeBatch, isAutomaticRenameReady, summarizeBatch } from './services/batch-processing'
+import { analyzeBatch, isAutomaticRenameReady, reconcileReviewStatus, summarizeBatch } from './services/batch-processing'
 import { analyzeDocumentsWithLocalOcr } from './services/local-ocr'
 import { applyCrossDocumentValidations } from './services/cross-document-validation'
 import { collectInconsistencies, downloadInconsistencyCsv } from './services/inconsistency-report'
@@ -87,11 +87,12 @@ function App() {
   }
 
   const updateDocument = (updated: AnalyzedDocument) => {
-    setDocuments((current) =>
-      applyCrossDocumentValidations(
+    setDocuments((current) => {
+      const crossValidated = applyCrossDocumentValidations(
         current.map((document) => document.id === updated.id ? updated : document),
-      ),
-    )
+      )
+      return crossValidated.map(reconcileReviewStatus)
+    })
   }
 
   const processBatch = async () => {
