@@ -188,7 +188,7 @@ function App() {
     )
 
     if (candidates.length === 0) {
-      setMessage('Não há documentos aprovados aguardando renomeação.')
+      setMessage('Não há documentos prontos aguardando renomeação.')
       return
     }
 
@@ -198,7 +198,7 @@ function App() {
         duplicateNames.has(document.suggestedName.toLocaleLowerCase('pt-BR')),
     )
     if (duplicateApproved.length > 0) {
-      setMessage('Há nomes propostos duplicados entre os documentos aprovados. Corrija-os antes de renomear.')
+      setMessage('Há nomes propostos duplicados entre os documentos prontos. Corrija-os antes de renomear.')
       return
     }
 
