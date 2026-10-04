@@ -191,6 +191,28 @@ function digitsOnly(value: string): string {
   return value.replace(/\D/g, '')
 }
 
+function sixDigitCandidateFromRecognition(result: {
+  data: {
+    text: string
+    confidence: number
+    words?: Array<{ text: string; confidence: number }>
+  }
+}): { value: string | null; confidence: number } {
+  const word = result.data.words?.find((item) => /^\d{6}$/.test(item.text.replace(/\D/g, '')))
+  if (word) {
+    return {
+      value: word.text.replace(/\D/g, ''),
+      confidence: word.confidence,
+    }
+  }
+
+  const match = result.data.text.match(/(?:^|\D)(\d{6})(?:\D|$)/)
+  return {
+    value: match?.[1] ?? null,
+    confidence: match ? result.data.confidence : 0,
+  }
+}
+
 function dateFromText(value: string): string | null {
   const match = value.match(/(\d{1,2})\D+(\d{1,2})\D+(\d{2,4})/)
   if (!match) return null
@@ -308,15 +330,15 @@ export async function extractCalibratedFields(
     const prontuarioRegion = getProntuarioRegion(canvas, kind)
     if (!prontuarioRegion) return {}
 
-    const numeroResult = await recognize(worker, numeroRegion, PSM.SINGLE_LINE, '0123456789')
+    const numeroResult = await recognize(worker, numeroRegion, PSM.SPARSE_TEXT, '0123456789')
     const dateResult = await recognize(worker, dateRegion, PSM.SINGLE_LINE, '0123456789/.-')
     const prontuarioResult = await recognize(worker, prontuarioRegion, PSM.SINGLE_LINE, '0123456789')
 
-    const rawNumero = digitsOnly(numeroResult.data.text)
+    const numeroCandidate = sixDigitCandidateFromRecognition(numeroResult)
     const rawProntuario = digitsOnly(prontuarioResult.data.text)
 
     return {
-      numeroDocumento: rawNumero.length >= 4 && rawNumero.length <= 8 ? rawNumero : null,
+      numeroDocumento: numeroCandidate.value,
       documentDate: dateFromText(dateResult.data.text),
       prontuario: rawProntuario.length >= 1 && rawProntuario.length <= 6
         ? normalizeProntuario(rawProntuario)
@@ -324,7 +346,7 @@ export async function extractCalibratedFields(
       fieldConfidence: {
         prontuario: prontuarioResult.data.confidence,
         documentDate: dateResult.data.confidence,
-        numeroDocumento: numeroResult.data.confidence,
+        numeroDocumento: numeroCandidate.confidence,
       },
     }
   }
