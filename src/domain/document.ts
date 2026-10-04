@@ -2,7 +2,10 @@ export type DocumentKind =
   | 'FICHA_C1'
   | 'ENVELOPE'
   | 'RECIBO_ATENDIMENTO'
+  | 'DECLARACAO_TRANSITO'
   | 'NAO_PADRONIZADO'
+
+export type CaseMode = 'REUNIAO' | 'EMERGENCIA'
 
 export type ReviewStatus = 'PENDENTE' | 'OK' | 'REVISAR' | 'NAO_CONFORME'
 
@@ -25,6 +28,8 @@ export interface AnalyzedDocument {
   prontuario: string | null
   numeroDocumento: string | null
   documentDate: string | null
+  caseMode: CaseMode | null
+  isMonthly: boolean
   suggestedName: string | null
   confidence: number | null
   reviewStatus: ReviewStatus
