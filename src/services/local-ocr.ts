@@ -158,6 +158,28 @@ export async function analyzeDocumentsWithLocalOcr(
         const confidence = Number.isFinite(result.data.confidence) ? result.data.confidence : 0
         const fields = extractOcrFields(result.data.text)
         const calibrated = await extractCalibratedFields(worker, oriented.canvas, fields.kind)
+        const calibratedConfidence = calibrated.fieldConfidence ?? {}
+
+        const preferCalibrated = <T,>(
+          value: T | null | undefined,
+          valueConfidence: number | undefined,
+          fallback: T | null | undefined,
+        ): T | null | undefined => {
+          if (value == null) return fallback
+          if ((valueConfidence ?? 0) >= OCR_MIN_CONFIDENCE) return value
+          if (fallback != null && String(fallback) === String(value)) return value
+          return fallback
+        }
+
+        const calibratedNeedsReview = [
+          [calibrated.prontuario, calibratedConfidence.prontuario, fields.prontuario],
+          [calibrated.numeroDocumento, calibratedConfidence.numeroDocumento, fields.numeroDocumento],
+          [calibrated.documentDate, calibratedConfidence.documentDate, fields.documentDate],
+        ].some(([value, valueConfidence, fallback]) =>
+          value != null &&
+          Number(valueConfidence ?? 0) < OCR_MIN_CONFIDENCE &&
+          (fallback == null || String(fallback) !== String(value)),
+        )
 
         const isPdfDocument =
           file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
@@ -165,9 +187,21 @@ export async function analyzeDocumentsWithLocalOcr(
         const next: AnalyzedDocument = {
           ...current,
           kind: fields.kind ?? current.kind,
-          prontuario: calibrated.prontuario ?? fields.prontuario ?? current.prontuario,
-          numeroDocumento: calibrated.numeroDocumento ?? fields.numeroDocumento ?? current.numeroDocumento,
-          documentDate: calibrated.documentDate ?? fields.documentDate ?? current.documentDate,
+          prontuario: preferCalibrated(
+            calibrated.prontuario,
+            calibratedConfidence.prontuario,
+            fields.prontuario ?? current.prontuario,
+          ) ?? null,
+          numeroDocumento: preferCalibrated(
+            calibrated.numeroDocumento,
+            calibratedConfidence.numeroDocumento,
+            fields.numeroDocumento ?? current.numeroDocumento,
+          ) ?? null,
+          documentDate: preferCalibrated(
+            calibrated.documentDate,
+            calibratedConfidence.documentDate,
+            fields.documentDate ?? current.documentDate,
+          ) ?? null,
           caseMode: calibrated.caseMode ?? fields.caseMode ?? current.caseMode,
           isMonthly: fields.isMonthly || current.isMonthly,
           confidence: confidence / 100,
@@ -175,6 +209,8 @@ export async function analyzeDocumentsWithLocalOcr(
           validations: current.validations.filter(
             (item) =>
               item.id !== 'ocr-confidence' &&
+              item.id !== 'ocr-field-confidence' &&
+              item.id !== 'ocr-error' &&
               item.id !== 'ocr-orientation' &&
               item.id !== 'ocr-orientation-pdf',
           ),
@@ -197,6 +233,20 @@ export async function analyzeDocumentsWithLocalOcr(
           ]
         }
 
+        if (calibratedNeedsReview) {
+          next.validations = [
+            ...next.validations,
+            {
+              id: 'ocr-field-confidence',
+              label: 'Confiança dos campos calibrados',
+              value: null,
+              status: 'REVISAR',
+              note: 'Uma região calibrada produziu valor diferente ou isolado com baixa confiança. Confira os campos antes de aprovar.',
+            },
+          ]
+          next.reviewStatus = 'REVISAR'
+        }
+
         if (confidence < OCR_MIN_CONFIDENCE || !fields.kind) {
           next.validations = [
             ...next.validations,
@@ -217,6 +267,7 @@ export async function analyzeDocumentsWithLocalOcr(
       } catch (error) {
         analyzed.push({
           ...current,
+          confidence: null,
           reviewStatus: 'REVISAR',
           validations: [
             ...current.validations.filter((item) => item.id !== 'ocr-error'),
