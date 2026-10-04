@@ -38,7 +38,7 @@ describe('analyzeBatch', () => {
     ])
 
     expect(result.reviewStatus).toBe('OK')
-    expect(result.suggestedName).toBe('001990_013068_dt.jpg')
+    expect(result.suggestedName).toBe('001990_013068_DT.jpg')
   })
 
   it('mantém C1 completa para revisão enquanto faltam regras automáticas', () => {
@@ -110,7 +110,7 @@ describe('analyzeBatch', () => {
       numeroDocumentoConfidence: null,
       documentDate: '02/09/2026',
       confidence: 0.99,
-      suggestedName: '001990_013068_dt.jpg',
+      suggestedName: '001990_013068_DT.jpg',
       reviewStatus: 'REVISAR',
     })
 
@@ -142,7 +142,7 @@ describe('analyzeBatch', () => {
       numeroDocumentoConfidence: 0.94,
       documentDate: null,
       confidence: 0.55,
-      suggestedName: '001990_013068_dt.jpg',
+      suggestedName: '001990_013068_DT.jpg',
       reviewStatus: 'REVISAR',
     })
 
@@ -173,7 +173,7 @@ describe('analyzeBatch', () => {
       prontuarioConfidence: 0.95,
       prontuarioOcrSource: 'CONSENSUS',
       numeroDocumentoConfidence: 0.95,
-      suggestedName: '001990_013068_dt.pdf',
+      suggestedName: '001990_013068_DT.pdf',
       reviewStatus: 'REVISAR',
       validations: [{
         id: 'ocr-orientation-pdf',
@@ -196,7 +196,7 @@ describe('analyzeBatch', () => {
       prontuarioConfidence: 0.95,
       prontuarioOcrSource: 'CONSENSUS',
       numeroDocumentoConfidence: 0.95,
-      suggestedName: '001990_013068_dt.jpg',
+      suggestedName: '001990_013068_DT.jpg',
       reviewStatus: 'REVISAR',
       validations: [{
         id: 'ocr-error',
@@ -215,7 +215,7 @@ describe('analyzeBatch', () => {
       prontuario: '001990',
       numeroDocumento: null,
       documentDate: '02/09/2026',
-      suggestedName: '001990_dt.jpg',
+      suggestedName: '001990_DT.jpg',
       reviewStatus: 'OK',
       validations: [],
     }))
