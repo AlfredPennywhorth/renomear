@@ -123,3 +123,35 @@ Nome sugerido: PRONTUARIO_NUMERO_dt.ext.
 5. Restringir o alfabeto quando o campo for numérico.
 6. Manter confiança por campo, não apenas por documento.
 7. Quando a confiança for insuficiente, mostrar o recorte e exigir revisão humana.
+
+
+### Amostra mensal confirmada
+
+Nova amostra confirma o marcador textual de atendimento mensal no próprio envelope/recibo:
+
+- prontuário: 002001;
+- Data da Reunião: 04/07/2026;
+- sequência: 053414;
+- linha de modalidade: "C = Mensal R$ 1.500,00";
+- carimbo/data do recibo: 01 AGO 2026;
+- data manuscrita inferior: 31/07/2026.
+
+Regra consolidada:
+
+- a ocorrência explícita da palavra "Mensal" na linha de modalidade é evidência suficiente para classificar o envelope/recibo como atendimento mensal;
+- nesse caso, não é esperada Ficha C1 correspondente e sua ausência não gera REVISAR;
+- a Data da Reunião continua sendo extraída para registro do próprio envelope, mas não é cruzada com C1;
+- as demais datas do documento continuam independentes e não alteram a classificação mensal.
+
+### Nova amostra C1 + DT
+
+Outra amostra confirma:
+
+- Ficha C1 frente com prontuário manuscrito 3750 -> 003750;
+- C1 marcada como REUNIÃO;
+- data da C1: 04/07/2026;
+- Declaração de Trânsito nº 012415;
+- prontuário da DT: 003750;
+- data da DT: 02/07/2026.
+
+A data da Declaração de Trânsito não deve ser comparada com a data da C1. O vínculo por prontuário pode ser usado apenas como conferência de pertencimento ao mesmo atendimento quando aplicável.
