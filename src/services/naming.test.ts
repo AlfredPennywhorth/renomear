@@ -29,6 +29,14 @@ describe('suggestFileName', () => {
     }))).toBe('002103_054831_env_frente.jpg')
   })
 
+  it('gera DT com prontuário e número do documento', () => {
+    expect(suggestFileName(base({
+      kind: 'DECLARACAO_TRANSITO',
+      prontuario: '1072',
+      numeroDocumento: '003604',
+    }))).toBe('001072_003604_DT.jpg')
+  })
+
   it('preserva a extensão em minúsculas', () => {
     expect(suggestFileName(base({
       originalName: 'FOTO.JPEG',
