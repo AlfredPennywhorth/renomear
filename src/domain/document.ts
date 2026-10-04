@@ -1,5 +1,6 @@
 export type DocumentKind =
   | 'FICHA_C1'
+  | 'FICHA_C1_VERSO'
   | 'ENVELOPE'
   | 'RECIBO_ATENDIMENTO'
   | 'DECLARACAO_TRANSITO'
@@ -28,6 +29,8 @@ export interface AnalyzedDocument {
   prontuario: string | null
   numeroDocumento: string | null
   documentDate: string | null
+  receiptDate?: string | null
+  signatureDate?: string | null
   caseMode: CaseMode | null
   isMonthly: boolean
   suggestedName: string | null
