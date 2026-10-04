@@ -48,7 +48,7 @@ async function fileExists(directory: DirectoryHandleLike, name: string): Promise
   }
 }
 
-async function sha256(file: File): Promise<string> {
+async function sha256(file: Blob): Promise<string> {
   const bytes = await file.arrayBuffer()
   const digest = await crypto.subtle.digest('SHA-256', bytes)
   return [...new Uint8Array(digest)]
@@ -56,10 +56,49 @@ async function sha256(file: File): Promise<string> {
     .join('')
 }
 
-async function verifySameContent(source: File, written: File): Promise<boolean> {
+async function verifySameContent(source: Blob, written: File): Promise<boolean> {
   if (source.size !== written.size) return false
   if (source.size === 0) return true
   return (await sha256(source)) === (await sha256(written))
+}
+
+async function rotateImage(file: File, degrees: 90 | 180 | 270): Promise<Blob> {
+  const bitmap = await createImageBitmap(file)
+  try {
+    const swap = degrees === 90 || degrees === 270
+    const canvas = document.createElement('canvas')
+    canvas.width = swap ? bitmap.height : bitmap.width
+    canvas.height = swap ? bitmap.width : bitmap.height
+    const context = canvas.getContext('2d', { alpha: false })
+    if (!context) throw new Error('Não foi possível aplicar a correção de orientação.')
+
+    context.fillStyle = '#fff'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    context.translate(canvas.width / 2, canvas.height / 2)
+    context.rotate((degrees * Math.PI) / 180)
+    context.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2)
+
+    const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, mime, mime === 'image/jpeg' ? 0.96 : undefined),
+    )
+    if (!blob) throw new Error('Não foi possível gerar a imagem orientada.')
+    return blob
+  } finally {
+    bitmap.close()
+  }
+}
+
+async function contentForRename(document: AnalyzedDocument, sourceFile: File): Promise<Blob> {
+  const rotation = document.rotationDegrees ?? 0
+  if (rotation === 0) return sourceFile
+
+  const isImage =
+    sourceFile.type.startsWith('image/') ||
+    /\.(jpe?g|png|webp)$/i.test(sourceFile.name)
+
+  if (!isImage) return sourceFile
+  return rotateImage(sourceFile, rotation)
 }
 
 export async function ensureReadWritePermission(directory: DirectoryHandleLike): Promise<boolean> {
@@ -135,13 +174,14 @@ async function renameOne(directory: DirectoryHandleLike, document: AnalyzedDocum
 
   let writable: WritableLike | null = null
   try {
+    const content = await contentForRename(document, sourceFile)
     writable = await targetHandle.createWritable()
-    await writable.write(sourceFile)
+    await writable.write(content)
     await writable.close()
     writable = null
 
     const writtenFile = await targetHandle.getFile()
-    const integrityOk = await verifySameContent(sourceFile, writtenFile)
+    const integrityOk = await verifySameContent(content, writtenFile)
     if (!integrityOk) {
       return {
         id: document.id,
