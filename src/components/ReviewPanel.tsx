@@ -21,12 +21,24 @@ const kindOptions: Array<{ value: DocumentKind; label: string }> = [
   { value: 'NAO_PADRONIZADO', label: 'Documento não padronizado' },
 ]
 
+function formatDateDraft(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8)
+  if (digits.length <= 2) return digits
+  if (digits.length <= 4) return digits.slice(0, 2) + '/' + digits.slice(2)
+  return digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4)
+}
+
 function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
   const [prontuarioDraft, setProntuarioDraft] = useState(document.prontuario ?? '')
+  const [dateDraft, setDateDraft] = useState(document.documentDate ?? '')
 
   useEffect(() => {
     setProntuarioDraft(document.prontuario ?? '')
   }, [document.id, document.prontuario])
+
+  useEffect(() => {
+    setDateDraft(document.documentDate ?? '')
+  }, [document.id, document.documentDate])
   const update = (patch: Partial<AnalyzedDocument>) => {
     const next = { ...document, ...patch }
     const editableFields = new Set([
@@ -51,6 +63,8 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
     setProntuarioDraft(nextValue)
     update({
       prontuario: normalized,
+      prontuarioConfidence: normalized ? 1 : null,
+      prontuarioOcrSource: normalized ? 'MANUAL' : null,
       reviewStatus: 'REVISAR',
     })
   }
@@ -177,12 +191,14 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
           <input
             type="text"
             inputMode="numeric"
-            value={document.documentDate ?? ''}
+            value={dateDraft}
             placeholder="DD/MM/AAAA"
             aria-invalid={!dateValidation.ok}
-            onChange={(event) => update({ documentDate: event.target.value })}
+            onChange={(event) => setDateDraft(formatDateDraft(event.target.value))}
+            onBlur={(event) => update({ documentDate: event.target.value || null })}
           />
           {!dateValidation.ok && <small className="field-error">{dateValidation.reason}</small>}
+          <small>A data é usada somente nas validações da auditoria; ela não compõe o nome do arquivo.</small>
         </label>
       </div>
 
