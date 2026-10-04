@@ -1,5 +1,11 @@
 # Regra complementar — carimbo VALOR TOTAL APROVADO
 
+## Onde o carimbo deve estar
+
+O carimbo **VALOR TOTAL APROVADO** pertence à **Ficha C1 que aprovou o atendimento**.
+
+Pelas regras atuais, ele **não deve ser procurado no envelope/recibo** para esta validação.
+
 ## Regra do envelope/recibo
 
 Nos envelopes/recibos não mensais, o sistema deverá distinguir pelo menos dois campos de valor:
@@ -9,34 +15,47 @@ Nos envelopes/recibos não mensais, o sistema deverá distinguir pelo menos dois
 
 ## Exceção permitida
 
-Quando o carimbo **VALOR TOTAL APROVADO** estiver presente e for reconhecido com confiança suficiente:
+Quando o envelope/recibo não mensal tiver valor apenas no campo "foi deixado com a família..." e o campo de compra/mercadorias/comprovantes estiver vazio ou inutilizado, o Renomear deverá localizar a **Ficha C1 correspondente que aprovou o atendimento**.
 
-- o envelope pode ficar sem lançamento de valor no campo de compra/mercadorias/comprovantes;
-- é aceitável haver valor apenas no campo "foi deixado com a família...";
-- essa combinação não deve gerar alerta de procedimento por ausência de valor no campo superior.
+Se nessa Ficha C1 estiver presente o carimbo **VALOR TOTAL APROVADO**, a situação é aceita e não deve gerar alerta de procedimento por ausência de valor no campo superior do envelope/recibo.
 
 ## Furo de procedimento
 
-Quando **não** houver carimbo **VALOR TOTAL APROVADO** e o documento **não** for atendimento mensal:
+Quando o documento **não** for atendimento mensal:
 
-- se houver valor somente no campo "foi deixado com a família...";
-- e o campo de compra/mercadorias/comprovantes estiver vazio ou apenas inutilizado;
+- houver valor apenas no campo "foi deixado com a família...";
+- o campo de compra/mercadorias/comprovantes estiver vazio ou inutilizado;
+- e a Ficha C1 correspondente **não** contiver o carimbo **VALOR TOTAL APROVADO**;
 
 o Renomear deverá sinalizar **REVISAR — possível furo de procedimento**.
 
 Mensagem sugerida:
 
-> Valor informado apenas no campo "foi deixado com a família", sem carimbo VALOR TOTAL APROVADO. Verifique o procedimento.
+> Valor informado apenas no campo "foi deixado com a família", sem carimbo VALOR TOTAL APROVADO na Ficha C1 correspondente. Verifique o procedimento.
 
 ## Atendimento mensal
 
-Nos atendimentos identificados como **Mensal**, essa regra não se aplica. A ausência de valor no campo de compra/mercadorias/comprovantes não deve gerar esse alerta apenas por haver valor no campo inferior.
+Nos atendimentos identificados como **Mensal**, essa regra não se aplica porque não é esperada Ficha C1 correspondente.
+
+## Regra de vínculo
+
+Para aplicar esta validação, o sistema deve relacionar o envelope/recibo à Ficha C1 correta usando o prontuário e o contexto do atendimento.
+
+Quando houver mais de uma Ficha C1 do mesmo prontuário, o sistema não deve escolher apenas pela proximidade dos arquivos. Deve considerar, conforme disponível:
+
+- REUNIÃO ou EMERGÊNCIA;
+- data;
+- paginação da ficha;
+- demais sinais de vínculo já definidos.
+
+Se a Ficha C1 que aprovou o atendimento não puder ser determinada com segurança, o resultado deve ser **REVISAR**.
 
 ## Regra de confiança
 
 Se o sistema não conseguir determinar com segurança:
 
-- se o carimbo VALOR TOTAL APROVADO está presente;
+- qual é a Ficha C1 correspondente;
+- se nela está presente o carimbo VALOR TOTAL APROVADO;
 - se o campo de compra/mercadorias contém valor, traço ou está vazio;
 - se o campo "foi deixado com a família" contém valor;
 
