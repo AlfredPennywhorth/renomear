@@ -417,3 +417,40 @@ No conjunto recebido:
 - envelope/recibo: prontuário 004354, Data da Reunião 18/02/2026, sequência 051128 e indicação "Emergência" no bloco de valores.
 
 A amostra deve ser usada também para detectar inconsistências de procedimento: se a C1 de emergência estiver preenchida com a data da reunião em vez da data real do atendimento, o Renomear deverá sinalizar **NÃO CONFORME** quando o recibo manual permitir demonstrar a data correta da emergência.
+
+
+## Lote de envelopes/recibos e Declarações de Trânsito — 04/10/2026
+
+Amostra recebida em ZIP com 79 imagens:
+
+- 74 envelopes/recibos no modelo Obra da Piedade;
+- 5 Declarações de Trânsito identificadas pelos arquivos DT.
+
+### Envelope/recibo
+
+No modelo observado:
+
+- prontuário: bloco superior direito;
+- Data da Reunião: logo abaixo do prontuário;
+- sequência: logo abaixo da Data da Reunião;
+- indicação Mensal: linha de valor, quando aplicável;
+- carimbo BAIXADO: evidência operacional, não identidade;
+- assinatura e data inferior: campos distintos da Data da Reunião.
+
+Foram adicionadas regiões fixas de OCR para prontuário, Data da Reunião e sequência. A detecção de Mensal continua textual e explícita.
+
+### Declaração de Trânsito
+
+No modelo observado:
+
+- título "Declaração de trânsito" no topo;
+- número da DT no quadro superior direito;
+- data da DT no mesmo quadro;
+- prontuário na faixa do destinatário;
+- carimbo BAIXADO é evidência auxiliar e não altera os identificadores.
+
+Foram adicionadas regiões fixas de OCR para número da DT, data e prontuário.
+
+### Observação
+
+As coordenadas são proporcionais ao documento normalizado após correção de orientação. Leituras fora da faixa esperada ou com baixa confiança permanecem em REVISAR; o sistema não deve inferir identificadores a partir do nome original do arquivo.
