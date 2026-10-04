@@ -44,6 +44,8 @@ export async function listSupportedDocuments(
       prontuario: null,
       numeroDocumento: null,
       documentDate: null,
+      caseMode: null,
+      isMonthly: false,
       suggestedName: null,
       confidence: null,
       reviewStatus: 'PENDENTE',
