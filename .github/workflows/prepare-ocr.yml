@@ -42,10 +42,10 @@ jobs:
           CORE_DIR="$(dirname "$CORE_FILE")"
           cp "$CORE_DIR"/tesseract-core* public/ocr/core/
 
-          LANG_FILE="$(find node_modules/@tesseract.js-data/por -type f \( -name 'por.traineddata.gz' -o -name 'por.traineddata' \) | head -n 1)"
+          LANG_FILE="$(find -L node_modules/@tesseract.js-data/por -type f \( -name 'por.traineddata.gz' -o -name 'por.traineddata' \) | head -n 1)"
           if [ -z "$LANG_FILE" ]; then
             echo "Conteúdo do pacote de idioma:"
-            find node_modules/@tesseract.js-data/por -maxdepth 4 -type f -print
+            find -L node_modules/@tesseract.js-data/por -maxdepth 4 -type f -print
             exit 1
           fi
           if [[ "$LANG_FILE" == *.gz ]]; then
@@ -54,7 +54,7 @@ jobs:
             gzip -c "$LANG_FILE" > public/ocr/lang/por.traineddata.gz
           fi
 
-          PDF_WORKER="$(find node_modules/pdfjs-dist -type f -name 'pdf.worker.min.mjs' | head -n 1)"
+          PDF_WORKER="$(find -L node_modules/pdfjs-dist -type f -name 'pdf.worker.min.mjs' | head -n 1)"
           test -n "$PDF_WORKER"
           cp "$PDF_WORKER" public/pdf/pdf.worker.min.mjs
 
