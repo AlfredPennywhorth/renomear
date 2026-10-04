@@ -357,10 +357,12 @@ O sistema deverá, quando possível:
 
 ### Regra complementar — VALOR TOTAL APROVADO
 
-Nos envelopes/recibos não mensais, o carimbo **VALOR TOTAL APROVADO** permite que o campo de compra de mercadorias/comprovantes permaneça sem valor, desde que haja lançamento no campo "foi deixado com a família..." quando aplicável.
+Nos envelopes/recibos não mensais, quando houver valor apenas no campo "foi deixado com a família..." e o campo de compra de mercadorias/comprovantes estiver vazio ou inutilizado, o Renomear deve conferir a **Ficha C1 correspondente que aprovou o atendimento**.
 
-Sem esse carimbo, se houver valor apenas no campo "foi deixado com a família..." e o campo de compra/mercadorias/comprovantes estiver vazio ou inutilizado, o Renomear deve sinalizar **REVISAR — possível furo de procedimento**.
+Se essa Ficha C1 contiver o carimbo **VALOR TOTAL APROVADO**, a situação é aceita. Se a Ficha C1 correspondente não contiver o carimbo, sinalizar **REVISAR — possível furo de procedimento**.
 
-A regra não se aplica aos atendimentos identificados como **Mensal**.
+O carimbo não deve ser procurado no envelope/recibo para esta regra, pelas regras atuais.
+
+A regra não se aplica aos atendimentos identificados como **Mensal**, pois nesse caso não é esperada Ficha C1 correspondente.
 
 Detalhamento em `docs/REGRA_VALOR_TOTAL_APROVADO.md`.
