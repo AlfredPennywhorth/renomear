@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import type { AnalyzedDocument } from '../domain/document'
 
 type Props = {
@@ -8,8 +9,26 @@ type Props = {
 }
 
 function BatchRenameConfirm({ documents, busy, onCancel, onConfirm }: Props) {
+  const dialogRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    dialogRef.current?.focus()
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !busy) onCancel()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [busy, onCancel])
+
   return (
-    <section className="batch-confirm" role="dialog" aria-modal="true" aria-labelledby="batch-title">
+    <section
+      ref={dialogRef}
+      className="batch-confirm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="batch-title"
+      tabIndex={-1}
+    >
       <header>
         <div>
           <p className="eyebrow">Confirmação final</p>
@@ -28,7 +47,7 @@ function BatchRenameConfirm({ documents, busy, onCancel, onConfirm }: Props) {
       </div>
 
       <div className="batch-warning">
-        O Renomear verificará conflitos novamente antes de cada alteração e não sobrescreverá arquivos existentes.
+        O Renomear verificará conflitos novamente antes de cada alteração, validará a integridade da cópia e só então removerá o nome original.
       </div>
 
       <footer>
