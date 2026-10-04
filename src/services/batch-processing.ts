@@ -111,6 +111,7 @@ export function summarizeBatch(documents: AnalyzedDocument[]): BatchAnalysisSumm
 
 
 export function isAutomaticRenameReady(document: AnalyzedDocument): boolean {
+  if (document.reviewStatus === 'NAO_CONFORME') return false
   if (!document.suggestedName || !document.kind || !document.prontuario) return false
   if (!normalizeProntuario(document.prontuario)) return false
   if ((document.confidence ?? 0) < 0.72) return false
@@ -124,8 +125,33 @@ export function isAutomaticRenameReady(document: AnalyzedDocument): boolean {
     return false
   }
 
+  const dateRequired =
+    document.kind === 'ENVELOPE' ||
+    document.kind === 'RECIBO_ATENDIMENTO' ||
+    document.kind === 'FICHA_C1' ||
+    document.kind === 'DECLARACAO_TRANSITO' ||
+    document.kind === 'RECIBO_EMERGENCIA_MANUAL'
+
+  if (
+    dateRequired &&
+    (!document.documentDate || !validateBrazilianDate(document.documentDate).ok)
+  ) {
+    return false
+  }
+
   const hasOcrBlock = document.validations.some(
     (item) => item.id === 'ocr-confidence' && item.status === 'REVISAR',
   )
   return !hasOcrBlock
+}
+
+
+export function reconcileReviewStatus(document: AnalyzedDocument): AnalyzedDocument {
+  if (document.validations.some((item) => item.status === 'NAO_CONFORME')) {
+    return { ...document, reviewStatus: 'NAO_CONFORME' }
+  }
+  if (document.validations.some((item) => item.status === 'REVISAR')) {
+    return { ...document, reviewStatus: 'REVISAR' }
+  }
+  return document
 }
