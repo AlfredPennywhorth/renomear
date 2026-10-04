@@ -48,16 +48,25 @@ function fakeDirectory(initial: Record<string, Uint8Array>, corruptWrites = fals
         files.set(name, new Uint8Array())
       }
 
+      let handleName = name
       return {
-        getFile: async () => makeFile(name, files.get(name) ?? new Uint8Array()),
+        getFile: async () => makeFile(handleName, files.get(handleName) ?? new Uint8Array()),
         createWritable: async () => ({
           write: async (data: Blob) => {
             const source = new Uint8Array(await data.arrayBuffer())
-            files.set(name, corruptWrites ? new Uint8Array([9, 9, 9]) : source)
+            files.set(handleName, corruptWrites ? new Uint8Array([9, 9, 9]) : source)
           },
           close: async () => {},
           abort: async () => {},
         }),
+        move: async (target: string) => {
+          if (files.has(target)) throw new DOMException('Destino já existe', 'InvalidModificationError')
+          const current = files.get(handleName)
+          if (!current) throw new DOMException('Não encontrado', 'NotFoundError')
+          files.set(target, current)
+          files.delete(handleName)
+          handleName = target
+        },
       }
     },
     removeEntry: async (name) => {
