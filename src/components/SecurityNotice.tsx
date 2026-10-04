@@ -22,6 +22,7 @@ function SecurityNotice({ accepted, onAcceptedChange }: Props) {
         <li>Não copie, envie, compartilhe ou fotografe documentos fora da finalidade autorizada.</li>
         <li>Feche o sistema e bloqueie a sessão ao se afastar do computador.</li>
         <li>Confirme os campos antes de aprovar; dados incertos devem permanecer como REVISAR.</li>
+        <li>Na homologação, o OCR aprimorado baixa a biblioteca e os modelos públicos do PaddleOCR para executar a leitura no navegador. Os documentos não são enviados a uma API de OCR. Esses ativos deverão ser hospedados pelo próprio Renomear antes de uma liberação de produção.</li>
         <li>Em caso de suspeita de acesso indevido, perda ou exposição, interrompa o uso e comunique imediatamente o responsável interno.</li>
       </ul>
 
