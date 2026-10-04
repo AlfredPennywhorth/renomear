@@ -109,3 +109,10 @@ Esperado:
 ## Registro do resultado
 
 Para cada rodada, registrar somente métricas agregadas e exemplos anonimizados. Não anexar imagens reais, nomes, prontuários ou conteúdo sensível em issues, PRs, logs ou artefatos públicos.
+
+
+## Bloqueador antes de produção
+
+A homologação pode usar os ativos públicos fixados do PaddleOCR para medir a qualidade da leitura sem custo de API. **Não promover esta integração para `main`/produção enquanto SDK, runtime WASM e modelos não estiverem hospedados sob a origem controlada pelo Renomear ou protegidos por mecanismo equivalente de integridade.**
+
+Motivo: embora o documento não seja enviado a uma API de OCR, código executável carregado em tempo de execução de uma origem externa amplia a cadeia de confiança. A homologação deve servir somente para validar acurácia e desempenho; a etapa de self-host dos ativos é requisito de segurança para produção.
