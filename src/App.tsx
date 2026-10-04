@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import BatchRenameConfirm from './components/BatchRenameConfirm'
 import DocumentPreview from './components/DocumentPreview'
+import HowToUse from './components/HowToUse'
+import QualityDashboard from './components/QualityDashboard'
 import ReviewPanel from './components/ReviewPanel'
 import SecurityNotice from './components/SecurityNotice'
 import type { AnalyzedDocument } from './domain/document'
@@ -23,6 +25,7 @@ function App() {
   const [renameBusy, setRenameBusy] = useState(false)
   const [securityAccepted, setSecurityAccepted] = useState(false)
   const [batchCandidates, setBatchCandidates] = useState<AnalyzedDocument[]>([])
+  const [activeView, setActiveView] = useState<'DOCUMENTOS' | 'DASHBOARD' | 'COMO_USAR'>('DOCUMENTOS')
 
   const selectedDocument = documents.find((document) => document.id === selectedId) ?? null
   const previewDocument = documents.find((document) => document.id === previewId) ?? null
@@ -161,6 +164,32 @@ function App() {
   return (
     <main className="shell">
       <section className="workspace">
+        <nav className="app-nav" aria-label="Navegação principal">
+          <button
+            type="button"
+            className={activeView === 'DOCUMENTOS' ? 'nav-button active' : 'nav-button'}
+            onClick={() => setActiveView('DOCUMENTOS')}
+          >
+            Documentos
+          </button>
+          <button
+            type="button"
+            className={activeView === 'DASHBOARD' ? 'nav-button active' : 'nav-button'}
+            onClick={() => setActiveView('DASHBOARD')}
+          >
+            Dashboard
+          </button>
+          <button
+            type="button"
+            className={activeView === 'COMO_USAR' ? 'nav-button active' : 'nav-button'}
+            onClick={() => setActiveView('COMO_USAR')}
+          >
+            Como usar
+          </button>
+        </nav>
+
+        {activeView === 'DOCUMENTOS' && (
+          <>
         <header className="hero">
           <div>
             <p className="eyebrow">Processamento local</p>
@@ -267,23 +296,35 @@ function App() {
             </div>
           )}
         </section>
+          </>
+        )}
+
+        {activeView === 'DASHBOARD' && (
+          <QualityDashboard
+            documents={documents}
+            inconsistencies={inconsistencies}
+            onExport={() => downloadInconsistencyCsv(inconsistencies)}
+          />
+        )}
+
+        {activeView === 'COMO_USAR' && <HowToUse />}
       </section>
 
-      {selectedDocument && (
+      {selectedDocument && activeView === 'DOCUMENTOS' && (
         <>
           <button className="drawer-backdrop" aria-label="Fechar revisão" onClick={() => setSelectedId(null)} />
           <ReviewPanel document={selectedDocument} onClose={() => setSelectedId(null)} onChange={updateDocument} />
         </>
       )}
 
-      {directory && previewDocument && (
+      {directory && previewDocument && activeView === 'DOCUMENTOS' && (
         <>
           <button className="modal-backdrop" aria-label="Fechar visualização" onClick={() => setPreviewId(null)} />
           <DocumentPreview directory={directory} fileName={previewDocument.originalName} onClose={() => setPreviewId(null)} />
         </>
       )}
 
-      {batchCandidates.length > 0 && (
+      {batchCandidates.length > 0 && activeView === 'DOCUMENTOS' && (
         <>
           <button
             className="modal-backdrop"
