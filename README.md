@@ -19,14 +19,15 @@ Reduzir o trabalho manual de organização de documentos digitalizados, mantendo
 
 1. Usuário escolhe a pasta com os documentos.
 2. O sistema conta e lista os arquivos suportados.
-3. Na homologação atual, o operador identifica/revisa manualmente tipo e campos relevantes.
-4. O sistema aplica as validações e cruzamentos já implementados.
-5. Um novo nome é sugerido.
-6. O usuário confirma ou corrige os dados.
-7. O sistema registra inconsistências e atualiza o dashboard.
-8. Somente documentos aprovados podem ser renomeados.
+3. O usuário aciona **Processar lote**.
+4. OCR local tenta classificar o documento e extrair campos reconhecíveis.
+5. O sistema aplica as validações e cruzamentos já implementados.
+6. Itens com leitura ou regra incompleta seguem para **REVISAR**.
+7. Apenas tipos com cobertura automática explicitamente liberada podem ser renomeados sem intervenção humana.
+8. O colaborador trata as exceções na tela lado a lado (documento + campos).
+9. O sistema registra inconsistências e atualiza o dashboard.
 
-A classificação e extração automáticas por OCR permanecem como etapa posterior do MVP automático. O processamento continuará estritamente local.
+O OCR roda no próprio navegador com Tesseract.js e PDF.js empacotados localmente. Não há envio do documento para serviço externo. A cobertura automática ainda será ampliada por tipo documental e por regiões de leitura.
 
 ## Tipos documentais iniciais
 
@@ -57,7 +58,9 @@ Detalhamento: `docs/LGPD_SEGURANCA.md`.
 
 - A branch `develop` alimenta o ambiente de homologação via GitHub Pages.
 - O ambiente de teste deve ser usado com cópias dos documentos nas primeiras rodadas.
-- A homologação atual valida o fluxo assistido e o motor de regras; OCR/classificação automática ainda não estão integrados.
+- A homologação atual já contém o primeiro OCR/classificador local para imagens e primeira página de PDFs.
+- A extração inicial é conservadora e ainda depende de calibração por regiões e amostras reais.
+- Nesta etapa, a liberação automática sem humano está restrita aos tipos cuja cobertura de regras foi explicitamente concluída.
 - O dashboard e o relatório de inconsistências são calculados localmente no navegador.
 - Manual: `docs/COMO_USAR.md`.
 - Dashboard: `docs/DASHBOARD_QUALIDADE.md`.
