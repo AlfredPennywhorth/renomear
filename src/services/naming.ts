@@ -5,6 +5,7 @@ const KIND_LABEL: Record<DocumentKind, string> = {
   FICHA_C1: 'ficha_c1',
   ENVELOPE: 'env_frente',
   RECIBO_ATENDIMENTO: 'recibo',
+  DECLARACAO_TRANSITO: 'dt',
   NAO_PADRONIZADO: 'documento',
 }
 
