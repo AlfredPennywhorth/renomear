@@ -454,3 +454,39 @@ Foram adicionadas regiões fixas de OCR para número da DT, data e prontuário.
 ### Observação
 
 As coordenadas são proporcionais ao documento normalizado após correção de orientação. Leituras fora da faixa esperada ou com baixa confiança permanecem em REVISAR; o sistema não deve inferir identificadores a partir do nome original do arquivo.
+
+
+## OCR híbrido local — rodada de 04/10/2026
+
+A leitura do prontuário manuscrito mostrou taxa de erro incompatível com renomeação automática baseada apenas no OCR global. A estratégia foi alterada para privilegiar identidade segura por campo.
+
+### Arquitetura
+
+- Tesseract.js permanece responsável por orientação, leitura geral e sinais de classificação;
+- a classificação também usa cabeçalhos fixos do formulário quando o OCR global não identifica o tipo;
+- o recorte do prontuário é pré-processado e ampliado antes da leitura;
+- PaddleOCR.js oficial é usado como segunda leitura local do **recorte do prontuário**, não da página inteira;
+- a implementação usa português (pt) com PP-OCRv6 no navegador;
+- a aplicação compara o resultado dos dois leitores antes de aceitar o prontuário.
+
+### Decisão do prontuário
+
+- concordância dos dois leitores com confiança mínima: aceitar por consenso;
+- somente PaddleOCR com confiança alta: aceitar;
+- somente Tesseract com confiança alta: aceitar;
+- valores diferentes entre os leitores: descartar ambos e mandar para REVISAR;
+- leitura abaixo do limiar: não preencher automaticamente;
+- valor 000000: sempre inválido;
+- correção humana: fonte MANUAL e prioridade sobre nova leitura automática na sessão.
+
+A regra operacional é conservadora: **é preferível deixar o prontuário vazio a renomear um documento com número incorreto**.
+
+### Data
+
+A data continua sendo extraída porque participa das validações institucionais, principalmente C1 x Data da Reunião do envelope/recibo. Ela não é componente do nome do arquivo e não deve bloquear a renomeação quando a identidade necessária ao nome estiver segura.
+
+### Dependência externa de ativos
+
+A homologação baixa a SDK e modelos públicos do PaddleOCR de origens fixadas na CSP. A inferência ocorre no navegador e o documento não é enviado a uma API de OCR.
+
+Para produção definitiva, recomenda-se copiar SDK, runtime WASM e modelos aprovados para hospedagem no próprio projeto, permitindo CSP novamente restrita a self e reduzindo risco de cadeia de suprimentos e dependência de disponibilidade externa.
