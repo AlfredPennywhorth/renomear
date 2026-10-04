@@ -169,7 +169,7 @@ describe('renameApprovedDocuments', () => {
     expect(result.status).toBe('RENOMEADO')
     expect(files.has('001072_003604_dt.jpg')).toBe(false)
     expect([...files.get('001072_003604_DT.jpg')!]).toEqual([...original])
-    expect(removed).toEqual([])
+    expect(removed.some((name) => name.startsWith('.renomear-source-'))).toBe(true)
   })
 
   it('preserva arquivo original vazio para revisão', async () => {
