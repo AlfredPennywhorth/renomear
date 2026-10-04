@@ -3,31 +3,53 @@
 ## Concluído
 
 - Estrutura web React/Vite/TypeScript.
-- Seleção de pasta em navegadores compatíveis.
+- Seleção de pasta local em navegadores Chromium compatíveis.
+- Solicitação de acesso readwrite à pasta.
 - Enumeração local de imagens e PDFs.
-- Fila de documentos.
+- Fila de documentos e visualização local.
 - Painel de revisão manual.
 - Normalização do prontuário para seis algarismos.
-- Geração inicial de nomes por tipo.
+- Geração de nomes por tipo documental.
+- Validações estruturais de data e sequência.
 - Estados OK, REVISAR e NÃO CONFORME.
-- Regras documentais iniciais para envelope/recibo.
-- Testes unitários iniciais e CI.
+- Regras documentais e cruzamentos iniciais.
+- Detecção de nomes duplicados sem diferenciar maiúsculas/minúsculas.
+- Confirmação em lote antes da renomeação.
+- Renomeação com preservação do original até a verificação de integridade da cópia.
+- Relatório local de inconsistências com proteção contra fórmula em CSV.
+- Dashboard de qualidade da sessão.
+- CSP restritiva com connect-src 'none'.
+- Dependências fixadas por versão e pnpm-lock.yaml.
+- CI com typecheck, testes e build.
+- Deploy de homologação condicionado ao CI verde.
+- Manual de uso e roteiro de homologação.
 
-## Próximas etapas sem depender de novas amostras
+## Escopo da homologação atual
 
-1. Persistir as correções do usuário em memória durante a sessão.
-2. Implementar validações estruturais de data e sequência.
-3. Preparar renomeação efetiva via File System Access API.
-4. Implementar tratamento de colisão de nomes.
-5. Adicionar confirmação em lote antes da renomeação.
-6. Criar fallback para navegadores sem acesso direto à pasta.
-7. Preparar visualização local do arquivo selecionado na tela de revisão.
+A homologação atual é **assistida**:
 
-## Etapas dependentes de amostras reais
+- o operador identifica/corrige manualmente os campos;
+- o sistema aplica as regras já implementadas, cruza informações, registra inconsistências, calcula indicadores e renomeia os aprovados;
+- OCR, classificação automática, leitura de manuscritos, carimbos, cores e correção real de orientação ainda não fazem parte do fluxo automático;
+- usar Chrome ou Edge em computador;
+- enquanto não houver fallback seguro, navegadores sem File System Access API ficam fora da homologação;
+- os primeiros testes com documentação devem ser feitos em cópias.
 
-1. Escolher e calibrar OCR local.
-2. Definir regiões de leitura por tipo documental.
-3. Classificar automaticamente Ficha C1, envelope, recibo e demais modelos.
-4. Detectar campo preenchido, inutilizado por traço ou vazio.
-5. Avaliar presença e legibilidade de assinatura.
-6. Ajustar limiares de confiança e regras de revisão humana.
+## Próximas etapas antes do MVP automático
+
+1. Implementar a cadeia completa de emergência (recibo manual + C1 + envelope).
+2. Resolver seleção de C1 correta quando houver múltiplas fichas do mesmo prontuário, considerando contexto, data e paginação.
+3. Modelar e implementar a regra VALOR TOTAL APROVADO e campos de valor relacionados.
+4. Escolher e calibrar OCR/classificador estritamente local.
+5. Implementar leitura por regiões e confiança por campo.
+6. Implementar análise de carimbos, cores e orientação real da imagem.
+7. Melhorar acessibilidade dos diálogos (foco, Esc e retorno de foco).
+8. Definir fallback seguro para navegadores sem acesso direto à pasta.
+
+## Melhorias posteriores
+
+- Web Worker/streaming para lotes grandes.
+- recibo local de de-para e eventual desfazer;
+- testes E2E e acessibilidade automatizada;
+- filtros e ordenação adicionais no dashboard;
+- eventual PWA/offline, se aprovado institucionalmente.
