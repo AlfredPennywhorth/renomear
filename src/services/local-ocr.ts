@@ -310,11 +310,15 @@ export async function analyzeDocumentsWithLocalOcr(
           paddleConfidence,
         )
 
-        const numeroDocumento = preferCalibrated(
-          calibrated.numeroDocumento,
-          calibratedConfidence.numeroDocumento,
-          fields.numeroDocumento ?? current.numeroDocumento,
-        ) ?? null
+        const numeroDocumento = current.numeroDocumentoOcrSource === 'MANUAL'
+          ? current.numeroDocumento
+          : (
+              preferCalibrated(
+                calibrated.numeroDocumento,
+                calibratedConfidence.numeroDocumento,
+                fields.numeroDocumento ?? current.numeroDocumento,
+              ) ?? null
+            )
         const documentDate = preferCalibrated(
           calibrated.documentDate,
           calibratedConfidence.documentDate,
@@ -322,7 +326,9 @@ export async function analyzeDocumentsWithLocalOcr(
         ) ?? null
 
         const calibratedNeedsReview = [
-          [calibrated.numeroDocumento, calibratedConfidence.numeroDocumento, fields.numeroDocumento],
+          ...(current.numeroDocumentoOcrSource === 'MANUAL'
+            ? []
+            : [[calibrated.numeroDocumento, calibratedConfidence.numeroDocumento, fields.numeroDocumento]]),
           [calibrated.documentDate, calibratedConfidence.documentDate, fields.documentDate],
         ].some(([value, valueConfidence, fallback]) =>
           value != null &&
@@ -340,9 +346,17 @@ export async function analyzeDocumentsWithLocalOcr(
           prontuarioConfidence: identity.confidence,
           prontuarioOcrSource: identity.source,
           numeroDocumento,
-          numeroDocumentoConfidence: numeroDocumento && calibrated.numeroDocumento === numeroDocumento
-            ? score01(calibratedConfidence.numeroDocumento, true)
-            : null,
+          numeroDocumentoConfidence: current.numeroDocumentoOcrSource === 'MANUAL' && numeroDocumento
+            ? 1
+            : numeroDocumento && calibrated.numeroDocumento === numeroDocumento
+              ? score01(calibratedConfidence.numeroDocumento, true)
+              : null,
+          numeroDocumentoOcrSource: current.numeroDocumentoOcrSource === 'MANUAL' && numeroDocumento
+            ? 'MANUAL'
+            : numeroDocumento && calibrated.numeroDocumento === numeroDocumento
+              ? 'TESSERACT'
+              : null,
+          manualReviewApproved: false,
           documentDate,
           caseMode: calibrated.caseMode ?? fields.caseMode ?? current.caseMode,
           isMonthly: fields.isMonthly || current.isMonthly,
@@ -457,6 +471,7 @@ export async function analyzeDocumentsWithLocalOcr(
         analyzed.push({
           ...current,
           confidence: null,
+          manualReviewApproved: false,
           reviewStatus: 'REVISAR',
           validations: [
             ...current.validations.filter((item) => item.id !== 'ocr-error'),
