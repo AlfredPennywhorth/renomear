@@ -6,6 +6,7 @@ import SecurityNotice from './components/SecurityNotice'
 import type { AnalyzedDocument } from './domain/document'
 import { listSupportedDocuments } from './services/local-files'
 import { applyCrossDocumentValidations } from './services/cross-document-validation'
+import { collectInconsistencies, downloadInconsistencyCsv } from './services/inconsistency-report'
 import { renameApprovedDocuments, type DirectoryHandleLike } from './services/local-rename'
 
 type PickerWindow = typeof window & {
@@ -38,6 +39,8 @@ function App() {
         .map(([name]) => name),
     )
   }, [documents])
+
+  const inconsistencies = useMemo(() => collectInconsistencies(documents), [documents])
 
   const counts = useMemo(() => ({
     total: documents.length,
@@ -168,6 +171,16 @@ function App() {
             </p>
           </div>
           <div className="hero-actions">
+            {directory && inconsistencies.length > 0 && (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => downloadInconsistencyCsv(inconsistencies)}
+                disabled={renameBusy}
+              >
+                Exportar inconsistências ({inconsistencies.length})
+              </button>
+            )}
             {directory && (
               <button type="button" className="secondary-button" onClick={renameApproved} disabled={renameBusy}>
                 {renameBusy ? 'Renomeando…' : 'Renomear aprovados'}
