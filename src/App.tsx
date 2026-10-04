@@ -23,6 +23,19 @@ function App() {
   const selectedDocument = documents.find((document) => document.id === selectedId) ?? null
   const previewDocument = documents.find((document) => document.id === previewId) ?? null
 
+  const duplicateNames = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const document of documents) {
+      if (!document.suggestedName) continue
+      counts.set(document.suggestedName, (counts.get(document.suggestedName) ?? 0) + 1)
+    }
+    return new Set(
+      [...counts.entries()]
+        .filter(([, count]) => count > 1)
+        .map(([name]) => name),
+    )
+  }, [documents])
+
   const counts = useMemo(() => ({
     total: documents.length,
     pending: documents.filter((item) => item.reviewStatus === 'PENDENTE').length,
@@ -78,6 +91,14 @@ function App() {
 
     if (candidates.length === 0) {
       setMessage('Não há documentos aprovados aguardando renomeação.')
+      return
+    }
+
+    const duplicateApproved = candidates.filter(
+      (document) => document.suggestedName && duplicateNames.has(document.suggestedName),
+    )
+    if (duplicateApproved.length > 0) {
+      setMessage('Há nomes propostos duplicados entre os documentos aprovados. Corrija-os antes de renomear.')
       return
     }
 
@@ -195,7 +216,12 @@ function App() {
                   {documents.map((document) => (
                     <tr key={document.id}>
                       <td className="file-name">{document.originalName}</td>
-                      <td>{document.suggestedName ?? '—'}</td>
+                      <td>
+                        {document.suggestedName ?? '—'}
+                        {document.suggestedName && duplicateNames.has(document.suggestedName) && (
+                          <span className="duplicate-warning">Nome duplicado</span>
+                        )}
+                      </td>
                       <td>{document.prontuario ?? '—'}</td>
                       <td><span className={'badge ' + statusClass(document.reviewStatus)}>{document.reviewStatus}</span></td>
                       <td>
