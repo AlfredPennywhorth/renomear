@@ -188,3 +188,53 @@ Outras causas de rejeição, mesmo com orientação correta:
 - mais de um documento relevante na mesma imagem quando isso impedir a classificação segura.
 
 A correção automática de orientação é um mecanismo de tolerância operacional; ela não transforma imagens ilegíveis ou incompletas em documentos válidos.
+
+
+## Regras de múltiplas Fichas C1
+
+Mais de uma Ficha C1 para o mesmo prontuário pode ser legítima em três situações:
+
+1. uma ficha representa atendimento de **EMERGÊNCIA** e outra representa atendimento de **REUNIÃO**;
+2. há mais de uma ficha para a mesma situação porque o conteúdo/material não cabe em uma única ficha;
+3. há versos adicionais vinculados ao mesmo atendimento por necessidade de registrar mais informações ou mercadorias.
+
+Quando houver duas fichas para a **mesma situação**, o procedimento deverá exigir marcação visível de paginação, por exemplo:
+
+- `1/2`
+- `2/2`
+
+O Renomear deverá:
+
+- tentar reconhecer essa paginação;
+- exigir que todas as partes tenham o mesmo prontuário e o mesmo contexto de atendimento;
+- verificar se a sequência está completa, sem duplicidade e sem salto;
+- não tratar `1/2` e `2/2` como duplicidade documental;
+- sinalizar **REVISAR** se houver mais de uma C1 para a mesma situação sem paginação identificável;
+- sinalizar **REVISAR** se aparecer apenas uma das partes esperadas.
+
+A existência de duas C1 com datas/contextos diferentes (por exemplo, EMERGÊNCIA e posteriormente REUNIÃO) não exige paginação entre elas.
+
+## Regra de cores da Ficha C1
+
+A Ficha C1 possui regra institucional de preenchimento por cor:
+
+- **campos inferiores**: preenchimento obrigatório com **caneta vermelha**;
+- **demais campos**: preenchimento obrigatório com **caneta azul**.
+
+Para o Renomear, a página deve ser dividida em pelo menos duas zonas:
+
+1. **zona superior/principal** — esperada em azul;
+2. **zona inferior de fechamento/reunião** — esperada em vermelho.
+
+Validação prevista:
+
+- tinta azul dominante nos campos superiores: OK;
+- tinta vermelha dominante nos campos inferiores: OK;
+- cor incompatível claramente detectada: NÃO CONFORME;
+- cor impossível de determinar com segurança: REVISAR.
+
+### Limitação importante
+
+A cor não pode ser validada de modo confiável em digitalizações em escala de cinza, preto e branco, baixa saturação, iluminação deficiente ou scanner que altere significativamente as cores. Nesses casos, o sistema **não deve presumir conformidade nem não conformidade**; deve apresentar **REVISAR** e informar que a cor não pôde ser confirmada.
+
+A validação de cor deve ocorrer sobre regiões específicas da ficha e não sobre a página inteira, porque carimbos, logotipos, impressão gráfica e marcas de conferência podem usar outras cores.
