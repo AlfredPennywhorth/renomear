@@ -34,6 +34,32 @@ function hasRequiredFields(document: AnalyzedDocument): boolean {
   return true
 }
 
+const AUTO_RULE_COVERAGE = new Set<AnalyzedDocument['kind']>([
+  'DECLARACAO_TRANSITO',
+])
+
+function withRuleCoverage(document: AnalyzedDocument): AnalyzedDocument {
+  const retained = document.validations.filter((item) => item.id !== 'automation-rule-coverage')
+
+  if (!document.kind || AUTO_RULE_COVERAGE.has(document.kind)) {
+    return { ...document, validations: retained }
+  }
+
+  return {
+    ...document,
+    validations: [
+      ...retained,
+      {
+        id: 'automation-rule-coverage',
+        label: 'Cobertura da auditoria automática',
+        value: document.kind,
+        status: 'REVISAR',
+        note: 'Este tipo ainda possui regras institucionais que exigem conferência humana nesta versão.',
+      },
+    ],
+  }
+}
+
 function statusFromValidations(document: AnalyzedDocument): AnalyzedDocument['reviewStatus'] {
   if (document.validations.some((item) => item.status === 'NAO_CONFORME')) return 'NAO_CONFORME'
   if (document.validations.some((item) => item.status === 'REVISAR')) return 'REVISAR'
@@ -45,8 +71,8 @@ function statusFromValidations(document: AnalyzedDocument): AnalyzedDocument['re
  * Motor de lote atual.
  *
  * A interface já trabalha no fluxo "automático primeiro, exceções depois".
- * Enquanto OCR/classificação visual não estiverem integrados, documentos sem
- * campos suficientes seguem para REVISAR em vez de serem adivinhados.
+ * OCR/classificação alimentam este motor, mas somente tipos cuja cobertura
+ * automática de regras está explicitamente liberada podem virar OK sem humano.
  */
 export function analyzeBatch(documents: AnalyzedDocument[]): AnalyzedDocument[] {
   const named = documents.map((document) => {
@@ -56,8 +82,9 @@ export function analyzeBatch(documents: AnalyzedDocument[]): AnalyzedDocument[] 
   })
 
   const crossValidated = applyCrossDocumentValidations(named)
+  const coverageValidated = crossValidated.map(withRuleCoverage)
 
-  return crossValidated.map((document) => ({
+  return coverageValidated.map((document) => ({
     ...document,
     reviewStatus:
       document.reviewStatus === 'NAO_CONFORME'
