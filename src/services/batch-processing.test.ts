@@ -85,6 +85,21 @@ describe('analyzeBatch', () => {
     expect(isAutomaticRenameReady(result)).toBe(true)
   })
 
+  it('aceita prontuário por consenso mesmo abaixo do limiar individual', () => {
+    const result = doc({
+      kind: 'FICHA_C1',
+      prontuario: '002103',
+      prontuarioConfidence: 0.61,
+      prontuarioOcrSource: 'CONSENSUS',
+      documentDate: null,
+      confidence: 0.52,
+      suggestedName: '002103_c1_frente.jpg',
+      reviewStatus: 'REVISAR',
+    })
+
+    expect(isAutomaticRenameReady(result)).toBe(true)
+  })
+
   it('não libera DT quando a sequência veio sem confiança própria', () => {
     const result = doc({
       kind: 'DECLARACAO_TRANSITO',
