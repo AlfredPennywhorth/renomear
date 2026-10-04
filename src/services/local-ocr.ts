@@ -173,7 +173,10 @@ export async function analyzeDocumentsWithLocalOcr(
           confidence: confidence / 100,
           rotationDegrees: isPdfDocument ? 0 : oriented.rotation,
           validations: current.validations.filter(
-            (item) => item.id !== 'ocr-confidence' && item.id !== 'ocr-orientation',
+            (item) =>
+              item.id !== 'ocr-confidence' &&
+              item.id !== 'ocr-orientation' &&
+              item.id !== 'ocr-orientation-pdf',
           ),
         }
 
