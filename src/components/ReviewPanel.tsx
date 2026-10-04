@@ -77,7 +77,11 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
           (item) =>
             item.id !== 'automation-rule-coverage' &&
             item.id !== 'ocr-confidence' &&
-            item.id !== 'ocr-field-confidence',
+            item.id !== 'ocr-field-confidence' &&
+            item.id !== 'ocr-prontuario-conflict' &&
+            item.id !== 'ocr-identity-confidence' &&
+            item.id !== 'ocr-paddle-unavailable' &&
+            item.id !== 'ocr-error',
         ),
       })
       return
@@ -121,6 +125,10 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
     'automation-rule-coverage',
     'ocr-confidence',
     'ocr-field-confidence',
+    'ocr-prontuario-conflict',
+    'ocr-identity-confidence',
+    'ocr-paddle-unavailable',
+    'ocr-error',
   ])
   const hasBlockingValidation = document.validations.some(
     (item) =>
