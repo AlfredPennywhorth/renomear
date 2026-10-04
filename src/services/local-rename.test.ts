@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AnalyzedDocument } from '../domain/document'
-import { renameApprovedDocuments, type DirectoryHandleLike } from './local-rename'
+import { renameApprovedDocuments, rotationOutputMime, type DirectoryHandleLike } from './local-rename'
 
 function makeDocument(overrides: Partial<AnalyzedDocument> = {}): AnalyzedDocument {
   return {
@@ -69,6 +69,17 @@ function fakeDirectory(initial: Record<string, Uint8Array>, corruptWrites = fals
 
   return { directory, files, removed }
 }
+
+describe('rotationOutputMime', () => {
+  it('preserva WebP mesmo quando File.type está vazio', () => {
+    expect(rotationOutputMime({ name: 'scan.webp', type: '' })).toBe('image/webp')
+  })
+
+  it('preserva PNG e usa JPEG para JPG', () => {
+    expect(rotationOutputMime({ name: 'scan.png', type: 'image/png' })).toBe('image/png')
+    expect(rotationOutputMime({ name: 'scan.jpg', type: 'image/jpeg' })).toBe('image/jpeg')
+  })
+})
 
 describe('renameApprovedDocuments', () => {
   it('só remove o original depois de verificar a integridade da cópia', async () => {
