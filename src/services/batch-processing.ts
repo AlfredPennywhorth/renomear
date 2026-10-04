@@ -141,7 +141,9 @@ export function isAutomaticRenameReady(document: AnalyzedDocument): boolean {
   }
 
   const hasOcrBlock = document.validations.some(
-    (item) => item.id === 'ocr-confidence' && item.status === 'REVISAR',
+    (item) =>
+      (item.id === 'ocr-confidence' || item.id === 'ocr-orientation-pdf') &&
+      item.status === 'REVISAR',
   )
   return !hasOcrBlock
 }
