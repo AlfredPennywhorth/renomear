@@ -62,6 +62,12 @@ async function verifySameContent(source: Blob, written: File): Promise<boolean> 
   return (await sha256(source)) === (await sha256(written))
 }
 
+export function rotationOutputMime(file: Pick<File, 'type' | 'name'>): string {
+  if (file.type === 'image/png' || /\.png$/i.test(file.name)) return 'image/png'
+  if (file.type === 'image/webp' || /\.webp$/i.test(file.name)) return 'image/webp'
+  return 'image/jpeg'
+}
+
 async function rotateImage(file: File, degrees: 90 | 180 | 270): Promise<Blob> {
   const bitmap = await createImageBitmap(file)
   try {
@@ -78,12 +84,7 @@ async function rotateImage(file: File, degrees: 90 | 180 | 270): Promise<Blob> {
     context.rotate((degrees * Math.PI) / 180)
     context.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2)
 
-    const mime =
-      file.type === 'image/png'
-        ? 'image/png'
-        : file.type === 'image/webp'
-          ? 'image/webp'
-          : 'image/jpeg'
+    const mime = rotationOutputMime(file)
     const quality = mime === 'image/png' ? undefined : 0.96
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, mime, quality),
