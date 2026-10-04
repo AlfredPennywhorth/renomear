@@ -283,12 +283,14 @@ function App() {
               </button>
             )}
             {directory && (
-              <button type="button" className="secondary-button" onClick={renameApproved} disabled={renameBusy || processingBusy}>
-                {renameBusy ? 'Renomeando…' : 'Renomear aprovados'}
-              </button>
-              <button type="button" onClick={processBatch} disabled={processingBusy || renameBusy || documents.length === 0}>
-                {processingBusy ? 'Processando lote…' : 'Processar lote'}
-              </button>
+              <>
+                <button type="button" className="secondary-button" onClick={renameApproved} disabled={renameBusy || processingBusy}>
+                  {renameBusy ? 'Renomeando…' : 'Renomear aprovados'}
+                </button>
+                <button type="button" onClick={processBatch} disabled={processingBusy || renameBusy || documents.length === 0}>
+                  {processingBusy ? 'Processando lote…' : 'Processar lote'}
+                </button>
+              </>
             )}
             <button type="button" onClick={selectFolder} disabled={busy || renameBusy || processingBusy || !securityAccepted}>
               {busy ? 'Lendo pasta…' : directory ? 'Trocar pasta' : 'Selecionar pasta'}
