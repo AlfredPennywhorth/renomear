@@ -138,11 +138,19 @@ function detectC1CaseMode(canvas: HTMLCanvasElement): AnalyzedDocument['caseMode
   return meeting > emergency ? 'REUNIAO' : 'EMERGENCIA'
 }
 
+export type CalibratedFields = Partial<AnalyzedDocument> & {
+  fieldConfidence?: {
+    prontuario?: number
+    numeroDocumento?: number
+    documentDate?: number
+  }
+}
+
 export async function extractCalibratedFields(
   worker: Worker,
   canvas: HTMLCanvasElement,
   kind: AnalyzedDocument['kind'],
-): Promise<Partial<AnalyzedDocument>> {
+): Promise<CalibratedFields> {
   if (kind === 'FICHA_C1') {
     const dateRegion = cropCanvas(canvas, 0.70, 0.105, 0.18, 0.09)
     const prontuarioRegion = cropCanvas(canvas, 0.87, 0.105, 0.13, 0.09)
@@ -156,6 +164,10 @@ export async function extractCalibratedFields(
         ? normalizeProntuario(rawProntuario)
         : null,
       caseMode: detectC1CaseMode(canvas),
+      fieldConfidence: {
+        prontuario: prontuarioResult.data.confidence,
+        documentDate: dateResult.data.confidence,
+      },
     }
   }
 
@@ -165,6 +177,7 @@ export async function extractCalibratedFields(
     const raw = digitsOnly(result.data.text)
     return {
       prontuario: raw.length >= 1 && raw.length <= 6 ? normalizeProntuario(raw) : null,
+      fieldConfidence: { prontuario: result.data.confidence },
     }
   }
 
@@ -188,6 +201,11 @@ export async function extractCalibratedFields(
         : null,
       documentDate: dateFromText(dateResult.data.text),
       numeroDocumento: rawSequence.length >= 4 && rawSequence.length <= 8 ? rawSequence : null,
+      fieldConfidence: {
+        prontuario: prontuarioResult.data.confidence,
+        documentDate: dateResult.data.confidence,
+        numeroDocumento: sequenceResult.data.confidence,
+      },
     }
   }
 
@@ -211,6 +229,11 @@ export async function extractCalibratedFields(
       prontuario: rawProntuario.length >= 1 && rawProntuario.length <= 6
         ? normalizeProntuario(rawProntuario)
         : null,
+      fieldConfidence: {
+        prontuario: prontuarioResult.data.confidence,
+        documentDate: dateResult.data.confidence,
+        numeroDocumento: numeroResult.data.confidence,
+      },
     }
   }
 
