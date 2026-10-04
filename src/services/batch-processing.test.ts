@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AnalyzedDocument } from '../domain/document'
-import { analyzeBatch, isAutomaticRenameReady, summarizeBatch } from './batch-processing'
+import { analyzeBatch, isAutomaticRenameReady, reconcileReviewStatus, summarizeBatch } from './batch-processing'
 
 function doc(overrides: Partial<AnalyzedDocument> = {}): AnalyzedDocument {
   return {
@@ -81,6 +81,49 @@ describe('analyzeBatch', () => {
 
     expect(result.reviewStatus).toBe('REVISAR')
     expect(isAutomaticRenameReady(result)).toBe(true)
+  })
+
+  it('não libera renomeação automática de documento não conforme', () => {
+    const [result] = analyzeBatch([
+      doc({
+        kind: 'DECLARACAO_TRANSITO',
+        prontuario: '1990',
+        numeroDocumento: '013068',
+        documentDate: '02/09/2026',
+        confidence: 0.95,
+        reviewStatus: 'NAO_CONFORME',
+      }),
+    ])
+
+    expect(isAutomaticRenameReady(result)).toBe(false)
+  })
+
+  it('não libera DT sem data válida para renomeação automática', () => {
+    const result = doc({
+      kind: 'DECLARACAO_TRANSITO',
+      prontuario: '001990',
+      numeroDocumento: '013068',
+      documentDate: null,
+      confidence: 0.95,
+      suggestedName: '001990_013068_dt.jpg',
+      reviewStatus: 'REVISAR',
+    })
+
+    expect(isAutomaticRenameReady(result)).toBe(false)
+  })
+
+  it('rebaixa OK quando nova validação cruzada vira não conforme', () => {
+    const result = reconcileReviewStatus(doc({
+      reviewStatus: 'OK',
+      validations: [{
+        id: 'cross-date-meeting',
+        label: 'Data da reunião',
+        value: '01/01/2026 x 02/01/2026',
+        status: 'NAO_CONFORME',
+      }],
+    }))
+
+    expect(result.reviewStatus).toBe('NAO_CONFORME')
   })
 
   it('não libera renomeação automática com baixa confiança OCR', () => {
