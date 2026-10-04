@@ -68,7 +68,7 @@ describe('analyzeBatch', () => {
     expect(result.reviewStatus).toBe('NAO_CONFORME')
   })
 
-  it('permite renomear documento identificado mesmo quando a auditoria ainda exige revisão', () => {
+  it('não renomeia automaticamente tipo sem cobertura liberada', () => {
     const [result] = analyzeBatch([
       doc({
         kind: 'FICHA_C1',
@@ -80,7 +80,7 @@ describe('analyzeBatch', () => {
     ])
 
     expect(result.reviewStatus).toBe('REVISAR')
-    expect(isAutomaticRenameReady(result)).toBe(true)
+    expect(isAutomaticRenameReady(result)).toBe(false)
   })
 
   it('não libera renomeação automática de documento não conforme', () => {
@@ -124,6 +124,26 @@ describe('analyzeBatch', () => {
     }))
 
     expect(result.reviewStatus).toBe('NAO_CONFORME')
+  })
+
+  it('não libera PDF com rotação física pendente', () => {
+    const result = doc({
+      kind: 'DECLARACAO_TRANSITO',
+      prontuario: '001990',
+      numeroDocumento: '013068',
+      documentDate: '02/09/2026',
+      confidence: 0.95,
+      suggestedName: '001990_013068_dt.pdf',
+      reviewStatus: 'REVISAR',
+      validations: [{
+        id: 'ocr-orientation-pdf',
+        label: 'Orientação',
+        value: '180°',
+        status: 'REVISAR',
+      }],
+    })
+
+    expect(isAutomaticRenameReady(result)).toBe(false)
   })
 
   it('não libera renomeação automática com baixa confiança OCR', () => {
