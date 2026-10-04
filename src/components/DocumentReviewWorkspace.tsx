@@ -81,12 +81,18 @@ function DocumentReviewWorkspace({ directory, document, onClose, onChange }: Pro
           {url && file && (
             isPdf(file)
               ? <iframe title={'Documento PDF: ' + document.originalName} src={url} className="review-pdf" />
-              : <img src={url} alt={'Documento ' + document.originalName} className="review-image" />
+              : <img
+                src={url}
+                alt={'Documento ' + document.originalName}
+                className="review-image"
+                style={document.rotationDegrees ? { transform: 'rotate(' + document.rotationDegrees + 'deg)' } : undefined}
+              />
           )}
         </div>
 
         <p className="review-workspace-note">
           Visualização local. O arquivo não é enviado ao servidor.
+          {document.rotationDegrees ? ' Orientação detectada: ' + document.rotationDegrees + '°.' : ''}
         </p>
       </div>
 
