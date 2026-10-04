@@ -142,7 +142,12 @@ export function isAutomaticRenameReady(document: AnalyzedDocument): boolean {
 
   const hasOcrBlock = document.validations.some(
     (item) =>
-      (item.id === 'ocr-confidence' || item.id === 'ocr-orientation-pdf') &&
+      (
+        item.id === 'ocr-confidence' ||
+        item.id === 'ocr-field-confidence' ||
+        item.id === 'ocr-error' ||
+        item.id === 'ocr-orientation-pdf'
+      ) &&
       item.status === 'REVISAR',
   )
   return !hasOcrBlock
@@ -154,6 +159,12 @@ export function reconcileReviewStatus(document: AnalyzedDocument): AnalyzedDocum
     return { ...document, reviewStatus: 'NAO_CONFORME' }
   }
   if (document.validations.some((item) => item.status === 'REVISAR')) {
+    return { ...document, reviewStatus: 'REVISAR' }
+  }
+  if (
+    document.reviewStatus === 'OK' &&
+    (!hasRequiredFields(document) || !document.suggestedName)
+  ) {
     return { ...document, reviewStatus: 'REVISAR' }
   }
   return document
