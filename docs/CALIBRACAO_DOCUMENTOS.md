@@ -112,7 +112,7 @@ Exemplo de calibração observado:
 - prontuário 001990;
 - item CESTA BÁSICA, quantidade 1,00.
 
-Nome sugerido: PRONTUARIO_NUMERO_dt.ext.
+Nome sugerido: PRONTUARIO_NUMERO_DT.ext.
 
 ## Estratégia de OCR
 
@@ -450,6 +450,19 @@ No modelo observado:
 - carimbo BAIXADO é evidência auxiliar e não altera os identificadores.
 
 Foram adicionadas regiões fixas de OCR para número da DT, data e prontuário.
+
+### Regra de nomenclatura da DT
+
+A Declaração de Trânsito exige **dois identificadores no nome**:
+
+- prontuário, com seis algarismos;
+- número impresso da própria DT, também preservando zeros à esquerda.
+
+Padrão consolidado: `PRONTUARIO_NUMERO_DT.ext`.
+
+Exemplo confirmado na amostra: prontuário `001072`, DT nº `003604` → `001072_003604_DT.jpg`.
+
+O número da DT é o campo **“Nº” no quadro superior direito**, acima da data. A leitura dessa região deve manter confiança própria do campo; ausência ou baixa confiança não autoriza renomeação automática.
 
 ### Observação
 
