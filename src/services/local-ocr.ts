@@ -340,12 +340,8 @@ export async function analyzeDocumentsWithLocalOcr(
           prontuarioConfidence: identity.confidence,
           prontuarioOcrSource: identity.source,
           numeroDocumento,
-          numeroDocumentoConfidence: numeroDocumento
-            ? (
-                calibrated.numeroDocumento === numeroDocumento
-                  ? score01(calibratedConfidence.numeroDocumento, true)
-                  : score01(confidence, true)
-              )
+          numeroDocumentoConfidence: numeroDocumento && calibrated.numeroDocumento === numeroDocumento
+            ? score01(calibratedConfidence.numeroDocumento, true)
             : null,
           documentDate,
           caseMode: calibrated.caseMode ?? fields.caseMode ?? current.caseMode,
