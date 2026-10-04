@@ -14,6 +14,7 @@ const kindOptions: Array<{ value: DocumentKind; label: string }> = [
   { value: 'FICHA_C1', label: 'Ficha C1 — frente' },
   { value: 'FICHA_C1_VERSO', label: 'Ficha C1 — verso / pedido de roupas e diversos' },
   { value: 'RECIBO_ATENDIMENTO', label: 'Recibo de atendimento' },
+  { value: 'RECIBO_EMERGENCIA_MANUAL', label: 'Recibo manual de emergência' },
   { value: 'DECLARACAO_TRANSITO', label: 'Declaração de trânsito' },
   { value: 'NAO_PADRONIZADO', label: 'Documento não padronizado' },
 ]
@@ -52,7 +53,8 @@ function ReviewPanel({ document, onClose, onChange }: Props) {
     document.kind === 'ENVELOPE' ||
     document.kind === 'RECIBO_ATENDIMENTO' ||
     document.kind === 'FICHA_C1' ||
-    document.kind === 'DECLARACAO_TRANSITO'
+    document.kind === 'DECLARACAO_TRANSITO' ||
+    document.kind === 'RECIBO_EMERGENCIA_MANUAL'
 
   const dateValidation = document.documentDate
     ? validateBrazilianDate(document.documentDate)
