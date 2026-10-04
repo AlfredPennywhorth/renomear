@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AnalyzedDocument } from '../domain/document'
-import { analyzeBatch, isAutomaticRenameReady, reconcileReviewStatus, summarizeBatch } from './batch-processing'
+import { analyzeBatch, isAutomaticRenameReady, isRenameReady, reconcileReviewStatus, summarizeBatch } from './batch-processing'
 
 function doc(overrides: Partial<AnalyzedDocument> = {}): AnalyzedDocument {
   return {
@@ -147,6 +147,44 @@ describe('analyzeBatch', () => {
     })
 
     expect(isAutomaticRenameReady(result)).toBe(true)
+  })
+
+  it('preserva OK aprovado manualmente diante de alerta revisável', () => {
+    const result = reconcileReviewStatus(doc({
+      kind: 'DECLARACAO_TRANSITO',
+      prontuario: '001072',
+      numeroDocumento: '003604',
+      suggestedName: '001072_003604_DT.jpg',
+      manualReviewApproved: true,
+      reviewStatus: 'OK',
+      validations: [{
+        id: 'cross-date-missing',
+        label: 'Data',
+        value: 'Data ausente',
+        status: 'REVISAR',
+      }],
+    }))
+
+    expect(result.reviewStatus).toBe('OK')
+    expect(isRenameReady(result)).toBe(true)
+  })
+
+  it('não trata OK automático como identidade segura sem confiança por campo', () => {
+    const result = doc({
+      kind: 'DECLARACAO_TRANSITO',
+      prontuario: '001072',
+      prontuarioConfidence: 0.95,
+      prontuarioOcrSource: 'PADDLE',
+      numeroDocumento: '003604',
+      numeroDocumentoConfidence: 0.42,
+      numeroDocumentoOcrSource: 'TESSERACT',
+      suggestedName: '001072_003604_DT.jpg',
+      reviewStatus: 'OK',
+      manualReviewApproved: false,
+    })
+
+    expect(isAutomaticRenameReady(result)).toBe(false)
+    expect(isRenameReady(result)).toBe(false)
   })
 
   it('rebaixa OK quando nova validação cruzada vira não conforme', () => {
