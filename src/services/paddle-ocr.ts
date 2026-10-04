@@ -69,7 +69,7 @@ async function loadEngine(): Promise<PaddleEngine> {
   return enginePromise
 }
 
-function numericCandidate(item: PaddleItem): {
+export function paddleNumericCandidate(item: PaddleItem): {
   value: string
   confidence: number
   rawText: string
@@ -106,7 +106,7 @@ export async function recognizeProntuarioWithPaddle(
 
     const items = result?.items ?? []
     const candidates = items
-      .map(numericCandidate)
+      .map(paddleNumericCandidate)
       .filter((item): item is NonNullable<typeof item> => item !== null)
       .sort((a, b) => b.confidence - a.confidence)
 
