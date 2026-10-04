@@ -7,6 +7,7 @@ import SecurityNotice from './components/SecurityNotice'
 import type { AnalyzedDocument } from './domain/document'
 import { listSupportedDocuments } from './services/local-files'
 import { analyzeBatch, summarizeBatch } from './services/batch-processing'
+import { analyzeDocumentsWithLocalOcr } from './services/local-ocr'
 import { applyCrossDocumentValidations } from './services/cross-document-validation'
 import { collectInconsistencies, downloadInconsistencyCsv } from './services/inconsistency-report'
 import { renameApprovedDocuments, type DirectoryHandleLike } from './services/local-rename'
@@ -101,7 +102,20 @@ function App() {
 
     try {
       setProcessingBusy(true)
-      const analyzed = analyzeBatch(documents)
+      const ocrAnalyzed = await analyzeDocumentsWithLocalOcr(
+        directory,
+        documents,
+        (progress) => {
+          const percent = typeof progress.progress === 'number'
+            ? ' — ' + String(Math.round(progress.progress * 100)) + '%'
+            : ''
+          setMessage(
+            'OCR ' + String(progress.current) + '/' + String(progress.total) +
+            ': ' + progress.fileName + ' — ' + progress.status + percent,
+          )
+        },
+      )
+      const analyzed = analyzeBatch(ocrAnalyzed)
       const summary = summarizeBatch(analyzed)
 
       const nameCounts = new Map<string, number>()
