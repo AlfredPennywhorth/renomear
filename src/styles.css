@@ -630,3 +630,140 @@ th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #
   .quality-type-row { flex-direction: column; }
   .quality-mini-stats { justify-content: flex-start; }
 }
+
+
+/* Revisão de exceções: documento e campos lado a lado */
+.review-workspace {
+  position: fixed;
+  z-index: 55;
+  inset: 3vh 3vw;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(420px, .8fr);
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 28px 90px rgba(0,0,0,.3);
+}
+
+.review-workspace-preview {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  border-right: 1px solid #dfe5e8;
+  background: #eef2f4;
+}
+
+.review-workspace-preview > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 18px 20px;
+  border-bottom: 1px solid #dfe5e8;
+  background: #fff;
+}
+
+.review-workspace-preview h2 {
+  margin: 0;
+  max-width: 60ch;
+  overflow-wrap: anywhere;
+  font-size: 17px;
+}
+
+.review-document-stage {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  place-items: center;
+  overflow: auto;
+  padding: 18px;
+}
+
+.review-image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  background: #fff;
+  box-shadow: 0 4px 22px rgba(0,0,0,.15);
+}
+
+.review-pdf {
+  width: 100%;
+  height: 100%;
+  min-height: 65vh;
+  border: 0;
+  background: #fff;
+}
+
+.review-workspace-note {
+  margin: 0;
+  padding: 9px 16px;
+  border-top: 1px solid #dfe5e8;
+  background: #fff;
+  color: #68757e;
+  font-size: 12px;
+}
+
+.review-workspace-fields {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.review-drawer.review-drawer-embedded {
+  position: static;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  overflow-y: auto;
+  box-shadow: none;
+}
+
+.review-drawer-embedded .review-header {
+  position: sticky;
+  z-index: 2;
+  top: -24px;
+  padding-top: 24px;
+  background: #fff;
+}
+
+@media (max-width: 980px) {
+  .review-workspace {
+    inset: 1.5vh 1.5vw;
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(38vh, .8fr) minmax(0, 1.2fr);
+  }
+
+  .review-workspace-preview {
+    border-right: 0;
+    border-bottom: 1px solid #dfe5e8;
+  }
+
+  .review-pdf {
+    min-height: 34vh;
+  }
+}
+
+@media (max-width: 760px) {
+  .review-workspace {
+    inset: 0;
+    border-radius: 0;
+    grid-template-rows: 42vh minmax(0, 1fr);
+  }
+
+  .review-document-stage {
+    padding: 8px;
+  }
+
+  .review-workspace-preview > header {
+    padding: 12px 14px;
+  }
+
+  .review-workspace-preview h2 {
+    font-size: 14px;
+  }
+}
