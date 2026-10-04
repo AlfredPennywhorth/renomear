@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import type { AnalyzedDocument, DocumentKind, ReviewStatus } from '../domain/document'
 import { normalizeProntuario } from '../domain/prontuario'
 import { validateBrazilianDate, validateSequence } from '../domain/validation'
@@ -21,6 +22,11 @@ const kindOptions: Array<{ value: DocumentKind; label: string }> = [
 ]
 
 function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
+  const [prontuarioDraft, setProntuarioDraft] = useState(document.prontuario ?? '')
+
+  useEffect(() => {
+    setProntuarioDraft(document.prontuario ?? '')
+  }, [document.id, document.prontuario])
   const update = (patch: Partial<AnalyzedDocument>) => {
     const next = { ...document, ...patch }
     next.suggestedName = suggestFileName(next)
@@ -29,8 +35,10 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
 
   const normalizeAndUpdateProntuario = (value: string) => {
     const normalized = normalizeProntuario(value)
+    const nextValue = normalized ?? value.replace(/\D/g, '').slice(0, 6)
+    setProntuarioDraft(nextValue)
     update({
-      prontuario: normalized ?? value,
+      prontuario: normalized,
       reviewStatus: normalized ? document.reviewStatus : 'REVISAR',
     })
   }
@@ -110,9 +118,10 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
           Prontuário
           <input
             inputMode="numeric"
-            value={document.prontuario ?? ''}
+            value={prontuarioDraft}
             placeholder="000000"
-            onChange={(event) => update({ prontuario: event.target.value })}
+            maxLength={6}
+            onChange={(event) => setProntuarioDraft(event.target.value.replace(/\D/g, '').slice(0, 6))}
             onBlur={(event) => normalizeAndUpdateProntuario(event.target.value)}
           />
           <small>Até 6 algarismos; zeros à esquerda são completados automaticamente.</small>
