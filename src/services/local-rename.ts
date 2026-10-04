@@ -116,9 +116,13 @@ export async function ensureReadWritePermission(directory: DirectoryHandleLike):
   return true
 }
 
-async function renameOne(directory: DirectoryHandleLike, document: AnalyzedDocument): Promise<RenameResult> {
+async function renameOne(
+  directory: DirectoryHandleLike,
+  document: AnalyzedDocument,
+  requireOk: boolean,
+): Promise<RenameResult> {
   const target = document.suggestedName
-  if (document.reviewStatus !== 'OK' || !target) {
+  if ((requireOk && document.reviewStatus !== 'OK') || !target) {
     return { id: document.id, from: document.originalName, to: target ?? '', status: 'IGNORADO' }
   }
   if (document.originalName.localeCompare(target, undefined, { sensitivity: 'accent' }) === 0) {
@@ -215,11 +219,13 @@ async function renameOne(directory: DirectoryHandleLike, document: AnalyzedDocum
 export async function renameApprovedDocuments(
   directory: DirectoryHandleLike,
   documents: AnalyzedDocument[],
+  options: { requireOk?: boolean } = {},
 ): Promise<RenameResult[]> {
+  const requireOk = options.requireOk ?? true
   const permission = await ensureReadWritePermission(directory)
   if (!permission) {
     return documents
-      .filter((document) => document.reviewStatus === 'OK' && document.suggestedName)
+      .filter((document) => (!requireOk || document.reviewStatus === 'OK') && document.suggestedName)
       .map((document) => ({
         id: document.id,
         from: document.originalName,
@@ -231,8 +237,8 @@ export async function renameApprovedDocuments(
 
   const results: RenameResult[] = []
   for (const document of documents) {
-    if (document.reviewStatus !== 'OK' || !document.suggestedName) continue
-    results.push(await renameOne(directory, document))
+    if ((requireOk && document.reviewStatus !== 'OK') || !document.suggestedName) continue
+    results.push(await renameOne(directory, document, requireOk))
   }
   return results
 }
