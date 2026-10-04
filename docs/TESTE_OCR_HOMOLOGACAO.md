@@ -127,3 +127,27 @@ Na homologação, confirmar também:
 - a ausência de data não impede o arquivo de entrar em **Renomear prontos** quando os campos que formam o nome estiverem seguros;
 - uma sequência/número corrigida manualmente deve ser tratada como confiança manual na sessão;
 - a data continua obrigatória somente quando a regra de auditoria correspondente precisar dela para declarar conformidade.
+
+
+## Regressão de edição e aprovação manual
+
+Validar também estes dois comportamentos no painel de revisão:
+
+1. **Sequência / nº do documento**
+   - clicar uma vez no campo;
+   - digitar todos os algarismos sem precisar clicar novamente entre cada tecla;
+   - sair do campo ou pressionar Enter;
+   - confirmar que o valor permanece salvo e o nome proposto é atualizado.
+
+2. **Aprovar como OK**
+   - abrir um documento corretamente identificado/renomeado que esteja em REVISAR apenas por alertas passíveis de conferência humana;
+   - conferir visualmente os campos;
+   - clicar em **Aprovar como OK**;
+   - confirmar que o status permanece OK ao voltar para a fila;
+   - uma validação **NÃO CONFORME** continua impedindo aprovação;
+   - a ausência de data não bloqueia a aprovação humana quando a data não é necessária para formar o nome, mas a informação permanece disponível para a auditoria correspondente.
+
+3. **Reprocessamento após correção manual**
+   - corrigir manualmente prontuário ou sequência;
+   - executar Processar lote novamente;
+   - confirmar que a correção manual não é substituída por nova leitura OCR.
