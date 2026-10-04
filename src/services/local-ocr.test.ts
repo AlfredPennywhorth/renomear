@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractOcrFields } from './local-ocr'
+import { extractOcrFields } from './ocr-extraction'
 
 describe('extractOcrFields', () => {
   it('classifica ficha C1 sem adivinhar modalidade apenas pelas opções impressas', () => {
