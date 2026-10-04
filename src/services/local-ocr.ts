@@ -159,16 +159,19 @@ export async function analyzeDocumentsWithLocalOcr(
         const fields = extractOcrFields(result.data.text)
         const calibrated = await extractCalibratedFields(worker, oriented.canvas, fields.kind)
 
+        const isPdfDocument =
+          file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+
         const next: AnalyzedDocument = {
           ...current,
           kind: fields.kind ?? current.kind,
           prontuario: calibrated.prontuario ?? fields.prontuario ?? current.prontuario,
-          numeroDocumento: fields.numeroDocumento ?? current.numeroDocumento,
+          numeroDocumento: calibrated.numeroDocumento ?? fields.numeroDocumento ?? current.numeroDocumento,
           documentDate: calibrated.documentDate ?? fields.documentDate ?? current.documentDate,
           caseMode: calibrated.caseMode ?? fields.caseMode ?? current.caseMode,
           isMonthly: fields.isMonthly || current.isMonthly,
           confidence: confidence / 100,
-          rotationDegrees: oriented.rotation,
+          rotationDegrees: isPdfDocument ? 0 : oriented.rotation,
           validations: current.validations.filter(
             (item) => item.id !== 'ocr-confidence' && item.id !== 'ocr-orientation',
           ),
@@ -180,11 +183,13 @@ export async function analyzeDocumentsWithLocalOcr(
           next.validations = [
             ...next.validations,
             {
-              id: 'ocr-orientation',
+              id: isPdfDocument ? 'ocr-orientation-pdf' : 'ocr-orientation',
               label: 'Orientação do arquivo',
               value: oriented.rotation + '°',
-              status: 'OK',
-              note: 'A orientação foi corrigida em memória para leitura e será aplicada quando o arquivo for renomeado.',
+              status: isPdfDocument ? 'REVISAR' : 'OK',
+              note: isPdfDocument
+                ? 'A orientação foi corrigida somente para leitura. Esta versão não regrava a rotação física de PDFs.'
+                : 'A orientação foi corrigida em memória para leitura e será aplicada quando a imagem for renomeada.',
             },
           ]
         }
