@@ -1,0 +1,39 @@
+name: Gerar lockfile
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - package.json
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.6
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.20.2
+
+      - name: Gerar lockfile
+        run: pnpm install --lockfile-only
+
+      - name: Commit lockfile
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: fixar lockfile"
+          git push
