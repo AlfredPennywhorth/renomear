@@ -52,6 +52,9 @@ export function extractOcrFields(rawText: string): OcrFields {
   ])
 
   const sequence = firstMatch(text, [
+    ...(kind === 'DECLARACAO_TRANSITO'
+      ? [/\bN(?:O|º|°)?\s*[:#-]?\s*(\d{6})\b/]
+      : []),
     /SEQUENCIA\s*[:#-]?\s*(\d{4,8})\b/,
     /SEQ\.?\s*[:#-]?\s*(\d{4,8})\b/,
     /(?:N[Oº°]|NUMERO)\s+(?:DO\s+)?DOCUMENTO\s*[:#-]?\s*(\d{4,8})\b/,
