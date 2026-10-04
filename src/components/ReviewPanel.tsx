@@ -197,7 +197,10 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
             value={document.numeroDocumento ?? ''}
             placeholder="Ex.: 054831"
             aria-invalid={!sequenceValidation.ok}
-            onChange={(event) => update({ numeroDocumento: event.target.value })}
+            onChange={(event) => update({
+              numeroDocumento: event.target.value,
+              numeroDocumentoConfidence: event.target.value ? 1 : null,
+            })}
           />
           {!sequenceValidation.ok && <small className="field-error">{sequenceValidation.reason}</small>}
         </label>
