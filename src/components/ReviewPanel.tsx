@@ -95,6 +95,8 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
   }
 
   const setStatus = (status: ReviewStatus) => {
+    if (status === 'OK' && document.reviewStatus === 'NAO_CONFORME') return
+
     if (status === 'OK') {
       update({
         reviewStatus: 'OK',
@@ -155,6 +157,7 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
     'ocr-identity-confidence',
     'ocr-paddle-unavailable',
     'ocr-error',
+    'cross-date-missing',
   ])
   const hasBlockingValidation = document.validations.some(
     (item) =>
@@ -165,6 +168,7 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
   const dateAllowsManualApproval = !document.documentDate || dateValidation.ok
 
   const canApprove =
+    document.reviewStatus !== 'NAO_CONFORME' &&
     Boolean(document.suggestedName) &&
     prontuarioValidation &&
     sequenceValidation.ok &&
