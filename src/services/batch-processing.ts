@@ -113,44 +113,44 @@ export function summarizeBatch(documents: AnalyzedDocument[]): BatchAnalysisSumm
 export function isAutomaticRenameReady(document: AnalyzedDocument): boolean {
   if (document.reviewStatus === 'NAO_CONFORME') return false
   if (!document.suggestedName || !document.kind || !document.prontuario) return false
-  if (!AUTO_RULE_COVERAGE.has(document.kind)) return false
+  if (document.kind === 'NAO_PADRONIZADO') return false
   if (!normalizeProntuario(document.prontuario)) return false
-  if ((document.confidence ?? 0) < 0.72) return false
 
-  if (
-    (document.kind === 'ENVELOPE' ||
-      document.kind === 'RECIBO_ATENDIMENTO' ||
-      document.kind === 'DECLARACAO_TRANSITO') &&
-    (!document.numeroDocumento || !validateSequence(document.numeroDocumento).ok)
-  ) {
-    return false
-  }
+  const prontuarioConfidence =
+    document.prontuarioOcrSource === 'MANUAL'
+      ? 1
+      : document.prontuarioConfidence ?? 0
+  if (prontuarioConfidence < 0.84) return false
 
-  const dateRequired =
+  const sequenceRequired =
     document.kind === 'ENVELOPE' ||
     document.kind === 'RECIBO_ATENDIMENTO' ||
-    document.kind === 'FICHA_C1' ||
-    document.kind === 'DECLARACAO_TRANSITO' ||
-    document.kind === 'RECIBO_EMERGENCIA_MANUAL'
+    document.kind === 'DECLARACAO_TRANSITO'
 
   if (
-    dateRequired &&
-    (!document.documentDate || !validateBrazilianDate(document.documentDate).ok)
+    sequenceRequired &&
+    (
+      !document.numeroDocumento ||
+      !validateSequence(document.numeroDocumento).ok ||
+      (document.numeroDocumentoConfidence ?? 0) < 0.8
+    )
   ) {
     return false
   }
 
-  const hasOcrBlock = document.validations.some(
+  const hasIdentityBlock = document.validations.some(
     (item) =>
       (
-        item.id === 'ocr-confidence' ||
-        item.id === 'ocr-field-confidence' ||
         item.id === 'ocr-error' ||
+        item.id === 'ocr-prontuario-conflict' ||
+        item.id === 'ocr-identity-confidence' ||
+        item.id === 'ocr-paddle-unavailable' ||
         item.id === 'ocr-orientation-pdf'
       ) &&
       item.status === 'REVISAR',
   )
-  return !hasOcrBlock
+
+  return !hasIdentityBlock
 }
 
 
