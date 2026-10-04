@@ -108,3 +108,24 @@ export function summarizeBatch(documents: AnalyzedDocument[]): BatchAnalysisSumm
     naoConformes: documents.filter((item) => item.reviewStatus === 'NAO_CONFORME').length,
   }
 }
+
+
+export function isAutomaticRenameReady(document: AnalyzedDocument): boolean {
+  if (!document.suggestedName || !document.kind || !document.prontuario) return false
+  if (!normalizeProntuario(document.prontuario)) return false
+  if ((document.confidence ?? 0) < 0.72) return false
+
+  if (
+    (document.kind === 'ENVELOPE' ||
+      document.kind === 'RECIBO_ATENDIMENTO' ||
+      document.kind === 'DECLARACAO_TRANSITO') &&
+    (!document.numeroDocumento || !validateSequence(document.numeroDocumento).ok)
+  ) {
+    return false
+  }
+
+  const hasOcrBlock = document.validations.some(
+    (item) => item.id === 'ocr-confidence' && item.status === 'REVISAR',
+  )
+  return !hasOcrBlock
+}
