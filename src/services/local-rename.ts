@@ -78,9 +78,15 @@ async function rotateImage(file: File, degrees: 90 | 180 | 270): Promise<Blob> {
     context.rotate((degrees * Math.PI) / 180)
     context.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2)
 
-    const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
+    const mime =
+      file.type === 'image/png'
+        ? 'image/png'
+        : file.type === 'image/webp'
+          ? 'image/webp'
+          : 'image/jpeg'
+    const quality = mime === 'image/png' ? undefined : 0.96
     const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, mime, mime === 'image/jpeg' ? 0.96 : undefined),
+      canvas.toBlob(resolve, mime, quality),
     )
     if (!blob) throw new Error('Não foi possível gerar a imagem orientada.')
     return blob
