@@ -33,6 +33,12 @@ function isNotFound(error: unknown): boolean {
 }
 
 async function fileExists(directory: DirectoryHandleLike, name: string): Promise<boolean> {
+  const expected = name.toLocaleLowerCase('pt-BR')
+  for await (const rawEntry of directory.values()) {
+    const entry = rawEntry as { name?: string }
+    if (entry.name?.toLocaleLowerCase('pt-BR') === expected) return true
+  }
+
   try {
     await directory.getFileHandle(name)
     return true
@@ -94,6 +100,15 @@ async function renameOne(directory: DirectoryHandleLike, document: AnalyzedDocum
 
   const sourceHandle = await directory.getFileHandle(document.originalName)
   const sourceFile = await sourceHandle.getFile()
+  if (sourceFile.size === 0) {
+    return {
+      id: document.id,
+      from: document.originalName,
+      to: target,
+      status: 'ERRO',
+      error: 'O arquivo original está vazio. Ele foi preservado e deve ser revisado.',
+    }
+  }
 
   if (await fileExists(directory, target)) {
     return {
