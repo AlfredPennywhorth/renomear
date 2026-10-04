@@ -6,7 +6,7 @@ import QualityDashboard from './components/QualityDashboard'
 import SecurityNotice from './components/SecurityNotice'
 import type { AnalyzedDocument } from './domain/document'
 import { listSupportedDocuments } from './services/local-files'
-import { analyzeBatch, isAutomaticRenameReady, reconcileReviewStatus, summarizeBatch } from './services/batch-processing'
+import { analyzeBatch, isAutomaticRenameReady, isRenameReady, reconcileReviewStatus, summarizeBatch } from './services/batch-processing'
 import { analyzeDocumentsWithLocalOcr } from './services/local-ocr'
 import { applyCrossDocumentValidations } from './services/cross-document-validation'
 import { collectInconsistencies, downloadInconsistencyCsv } from './services/inconsistency-report'
@@ -182,7 +182,7 @@ function App() {
   const renameApproved = async () => {
     if (!directory) return
     const candidates = documents.filter((document) =>
-      (document.reviewStatus === 'OK' || isAutomaticRenameReady(document)) &&
+      isRenameReady(document) &&
       document.suggestedName &&
       document.originalName !== document.suggestedName
     )
@@ -210,7 +210,7 @@ function App() {
 
     try {
       setRenameBusy(true)
-      const results = await renameApprovedDocuments(directory, batchCandidates)
+      const results = await renameApprovedDocuments(directory, batchCandidates, { requireOk: false })
       const byId = new Map(results.map((result) => [result.id, result]))
 
       setDocuments((current) => current.map((document) => {
