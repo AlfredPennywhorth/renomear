@@ -155,3 +155,36 @@ Outra amostra confirma:
 - data da DT: 02/07/2026.
 
 A data da Declaração de Trânsito não deve ser comparada com a data da C1. O vínculo por prontuário pode ser usado apenas como conferência de pertencimento ao mesmo atendimento quando aplicável.
+
+
+## Orientação e documentos fora do padrão
+
+As novas amostras confirmam que documentos podem ser digitalizados de lado. O Renomear deve tentar corrigir a orientação **em memória**, sem alterar o arquivo original, antes de rejeitar a leitura.
+
+### Estratégia
+
+1. testar a orientação original;
+2. se a confiança de classificação/leitura for insuficiente, testar rotações de 90°, 180° e 270°;
+3. escolher a orientação com maior confiança somente se ultrapassar o limiar mínimo definido;
+4. registrar que houve correção automática de orientação;
+5. executar classificação, OCR e validações sobre a imagem corrigida em memória;
+6. manter o arquivo original intacto até a etapa final de renomeação.
+
+### Rejeição
+
+Se nenhuma orientação permitir leitura confiável, o documento deve ser rejeitado para nova digitalização. Não tentar adivinhar o tipo ou os campos.
+
+Mensagem padrão:
+
+> Documento fora do padrão de leitura. Redigitalize o documento em posição correta, completo, legível e sem cortes.
+
+Outras causas de rejeição, mesmo com orientação correta:
+
+- documento cortado de forma que esconda campos obrigatórios;
+- resolução insuficiente para leitura;
+- desfoque significativo;
+- contraste insuficiente;
+- modelo não reconhecido;
+- mais de um documento relevante na mesma imagem quando isso impedir a classificação segura.
+
+A correção automática de orientação é um mecanismo de tolerância operacional; ela não transforma imagens ilegíveis ou incompletas em documentos válidos.
