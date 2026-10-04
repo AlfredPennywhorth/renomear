@@ -30,11 +30,16 @@ function formatDateDraft(value: string): string {
 
 function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
   const [prontuarioDraft, setProntuarioDraft] = useState(document.prontuario ?? '')
+  const [sequenceDraft, setSequenceDraft] = useState(document.numeroDocumento ?? '')
   const [dateDraft, setDateDraft] = useState(document.documentDate ?? '')
 
   useEffect(() => {
     setProntuarioDraft(document.prontuario ?? '')
   }, [document.id, document.prontuario])
+
+  useEffect(() => {
+    setSequenceDraft(document.numeroDocumento ?? '')
+  }, [document.id, document.numeroDocumento])
 
   useEffect(() => {
     setDateDraft(document.documentDate ?? '')
@@ -66,6 +71,7 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
       prontuario: normalized,
       prontuarioConfidence: normalized ? 1 : null,
       prontuarioOcrSource: normalized ? 'MANUAL' : null,
+      manualReviewApproved: false,
       validations: normalized
         ? document.validations.filter(
             (item) =>
@@ -75,6 +81,16 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
           )
         : document.validations,
       reviewStatus: 'REVISAR',
+    })
+  }
+
+  const commitSequence = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 8)
+    setSequenceDraft(digits)
+    update({
+      numeroDocumento: digits || null,
+      numeroDocumentoConfidence: digits ? 1 : null,
+      numeroDocumentoOcrSource: digits ? 'MANUAL' : null,
     })
   }
 
@@ -146,11 +162,13 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
       (item.status === 'REVISAR' || item.status === 'NAO_CONFORME'),
   )
 
+  const dateAllowsManualApproval = !document.documentDate || dateValidation.ok
+
   const canApprove =
     Boolean(document.suggestedName) &&
     prontuarioValidation &&
     sequenceValidation.ok &&
-    dateValidation.ok &&
+    dateAllowsManualApproval &&
     (document.kind !== 'FICHA_C1' || document.caseMode !== null) &&
     (document.kind !== 'FICHA_C1_VERSO' || Boolean(document.prontuario)) &&
     !hasBlockingValidation
@@ -196,14 +214,15 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
           Sequência / nº documento
           <input
             inputMode="numeric"
-            value={document.numeroDocumento ?? ''}
+            value={sequenceDraft}
             placeholder="Ex.: 054831"
+            maxLength={8}
             aria-invalid={!sequenceValidation.ok}
-            onChange={(event) => update({
-              numeroDocumento: event.target.value,
-              numeroDocumentoConfidence: event.target.value ? 1 : null,
-              numeroDocumentoOcrSource: event.target.value ? 'MANUAL' : null,
-            })}
+            onChange={(event) => setSequenceDraft(event.target.value.replace(/\D/g, '').slice(0, 8))}
+            onBlur={(event) => commitSequence(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') event.currentTarget.blur()
+            }}
           />
           {!sequenceValidation.ok && <small className="field-error">{sequenceValidation.reason}</small>}
         </label>
@@ -220,7 +239,7 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
             onBlur={(event) => update({ documentDate: event.target.value || null })}
           />
           {!dateValidation.ok && <small className="field-error">{dateValidation.reason}</small>}
-          <small>A data é usada somente nas validações da auditoria; ela não compõe o nome do arquivo.</small>
+          <small>A data é usada somente nas validações da auditoria; ela não compõe o nome do arquivo. Se estiver ilegível para o OCR, a conferência humana pode concluir a revisão.</small>
         </label>
       </div>
 
@@ -309,7 +328,7 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
           type="button"
           onClick={() => setStatus('OK')}
           disabled={!canApprove}
-          title={!canApprove ? 'Corrija os campos obrigatórios, a marcação da C1 e as validações pendentes antes de aprovar.' : undefined}
+          title={!canApprove ? 'Confira tipo, prontuário, número/sequência quando exigido e eventuais não conformidades antes de aprovar.' : undefined}
         >
           Aprovar como OK
         </button>
