@@ -76,3 +76,19 @@ Antes do uso em produção, a organização deve formalizar:
 ## Regra de produto
 
 O sistema pode informar que foi projetado com medidas de privacidade e segurança alinhadas à LGPD. Não deve exibir afirmações como "100% conforme com a LGPD", "LGPD garantida" ou equivalentes, porque a conformidade depende também de governança, finalidade, base legal, pessoas, processos e infraestrutura da organização.
+
+
+## Relatório de inconsistências
+
+Ao final do processamento, o Renomear poderá gerar localmente um relatório com as inconsistências encontradas para encaminhamento aos responsáveis.
+
+Princípios de minimização:
+
+- incluir apenas os identificadores necessários para localizar o documento e corrigir o problema;
+- priorizar prontuário, nome do arquivo, tipo documental, gravidade, regra violada e observação;
+- evitar nome completo, endereço, telefone, histórico social, informação de saúde, religião ou outros dados pessoais que não sejam necessários para tratar a pendência;
+- não incluir imagens, recortes ou conteúdo integral dos documentos no relatório padrão;
+- gerar o arquivo localmente no navegador, sem envio automático para servidor;
+- o compartilhamento posterior do relatório deve seguir os canais institucionais autorizados.
+
+O relatório não deve ser tratado como documento público. Mesmo minimizado, pode conter identificadores pessoais e informações sobre inconsistências do atendimento.
