@@ -146,6 +146,40 @@ describe('analyzeBatch', () => {
     expect(isAutomaticRenameReady(result)).toBe(false)
   })
 
+  it('não libera renomeação automática quando há erro de OCR', () => {
+    const result = doc({
+      kind: 'DECLARACAO_TRANSITO',
+      prontuario: '001990',
+      numeroDocumento: '013068',
+      documentDate: '02/09/2026',
+      confidence: 0.95,
+      suggestedName: '001990_013068_dt.jpg',
+      reviewStatus: 'REVISAR',
+      validations: [{
+        id: 'ocr-error',
+        label: 'Leitura automática',
+        value: null,
+        status: 'REVISAR',
+      }],
+    })
+
+    expect(isAutomaticRenameReady(result)).toBe(false)
+  })
+
+  it('rebaixa documento OK quando campo obrigatório fica inválido', () => {
+    const result = reconcileReviewStatus(doc({
+      kind: 'DECLARACAO_TRANSITO',
+      prontuario: '001990',
+      numeroDocumento: null,
+      documentDate: '02/09/2026',
+      suggestedName: '001990_dt.jpg',
+      reviewStatus: 'OK',
+      validations: [],
+    }))
+
+    expect(result.reviewStatus).toBe('REVISAR')
+  })
+
   it('não libera renomeação automática com baixa confiança OCR', () => {
     const [result] = analyzeBatch([
       doc({
