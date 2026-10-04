@@ -29,6 +29,18 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
   }, [document.id, document.prontuario])
   const update = (patch: Partial<AnalyzedDocument>) => {
     const next = { ...document, ...patch }
+    const editableFields = new Set([
+      'kind',
+      'prontuario',
+      'numeroDocumento',
+      'documentDate',
+      'caseMode',
+      'isMonthly',
+    ])
+    const changedAuditInput = Object.keys(patch).some((key) => editableFields.has(key))
+    if (changedAuditInput && document.reviewStatus === 'OK' && patch.reviewStatus === undefined) {
+      next.reviewStatus = 'REVISAR'
+    }
     next.suggestedName = suggestFileName(next)
     onChange(next)
   }
@@ -39,7 +51,7 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
     setProntuarioDraft(nextValue)
     update({
       prontuario: normalized,
-      reviewStatus: normalized ? document.reviewStatus : 'REVISAR',
+      reviewStatus: 'REVISAR',
     })
   }
 
@@ -48,7 +60,10 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
       update({
         reviewStatus: 'OK',
         validations: document.validations.filter(
-          (item) => item.id !== 'automation-rule-coverage' && item.id !== 'ocr-confidence',
+          (item) =>
+            item.id !== 'automation-rule-coverage' &&
+            item.id !== 'ocr-confidence' &&
+            item.id !== 'ocr-field-confidence',
         ),
       })
       return
@@ -88,7 +103,11 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
     ? normalizeProntuario(document.prontuario) !== null
     : document.kind === 'FICHA_C1_VERSO'
 
-  const humanResolvable = new Set(['automation-rule-coverage', 'ocr-confidence'])
+  const humanResolvable = new Set([
+    'automation-rule-coverage',
+    'ocr-confidence',
+    'ocr-field-confidence',
+  ])
   const hasBlockingValidation = document.validations.some(
     (item) =>
       !humanResolvable.has(item.id) &&
