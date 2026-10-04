@@ -121,7 +121,7 @@ async function fileToCanvas(file: File): Promise<HTMLCanvasElement | File> {
 
   if (!context) throw new Error('Não foi possível preparar o PDF para OCR.')
 
-  await page.render({ canvasContext: context, viewport }).promise
+  await page.render({ canvas, canvasContext: context, viewport }).promise
   return canvas
 }
 
