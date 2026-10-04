@@ -27,7 +27,21 @@ describe('analyzeBatch', () => {
     expect(result.suggestedName).toBeNull()
   })
 
-  it('aprova automaticamente C1 completa sem alertas', () => {
+  it('aprova automaticamente somente tipo com cobertura liberada', () => {
+    const [result] = analyzeBatch([
+      doc({
+        kind: 'DECLARACAO_TRANSITO',
+        prontuario: '1990',
+        numeroDocumento: '013068',
+        documentDate: '02/09/2026',
+      }),
+    ])
+
+    expect(result.reviewStatus).toBe('OK')
+    expect(result.suggestedName).toBe('001990_013068_dt.jpg')
+  })
+
+  it('mantém C1 completa para revisão enquanto faltam regras automáticas', () => {
     const [result] = analyzeBatch([
       doc({
         kind: 'FICHA_C1',
@@ -37,8 +51,8 @@ describe('analyzeBatch', () => {
       }),
     ])
 
-    expect(result.reviewStatus).toBe('OK')
-    expect(result.suggestedName).toBe('002103_c1_frente.jpg')
+    expect(result.reviewStatus).toBe('REVISAR')
+    expect(result.validations.some((item) => item.id === 'automation-rule-coverage')).toBe(true)
   })
 
   it('mantém não conformidade já confirmada', () => {
@@ -56,7 +70,7 @@ describe('analyzeBatch', () => {
 
   it('resume automáticos, revisões e não conformes', () => {
     const analyzed = analyzeBatch([
-      doc({ kind: 'FICHA_C1', prontuario: '2103', documentDate: '23/09/2026', caseMode: 'REUNIAO' }),
+      doc({ kind: 'DECLARACAO_TRANSITO', prontuario: '1990', numeroDocumento: '013068', documentDate: '02/09/2026' }),
       doc(),
       doc({ reviewStatus: 'NAO_CONFORME' }),
     ])
