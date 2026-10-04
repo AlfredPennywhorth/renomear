@@ -1,8 +1,8 @@
 import { createWorker, OEM, PSM, type Worker } from 'tesseract.js'
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist'
-import type { AnalyzedDocument, DocumentKind } from '../domain/document'
-import { normalizeProntuario } from '../domain/prontuario'
+import type { AnalyzedDocument } from '../domain/document'
 import { suggestFileName } from './naming'
+import { extractOcrFields } from './ocr-extraction'
 import type { DirectoryHandleLike } from './local-rename'
 
 export type OcrProgress = {
@@ -11,101 +11,6 @@ export type OcrProgress = {
   fileName: string
   status: string
   progress?: number
-}
-
-type OcrFields = {
-  kind: DocumentKind | null
-  prontuario: string | null
-  numeroDocumento: string | null
-  documentDate: string | null
-  caseMode: AnalyzedDocument['caseMode']
-  isMonthly: boolean
-}
-
-const OCR_MIN_CONFIDENCE = 82
-
-function asset(path: string): string {
-  const base = import.meta.env.BASE_URL || './'
-  return base + path.replace(/^\//, '')
-}
-
-function normalizeText(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toUpperCase()
-}
-
-function firstMatch(text: string, patterns: RegExp[]): string | null {
-  for (const pattern of patterns) {
-    const match = text.match(pattern)
-    if (match?.[1]) return match[1]
-  }
-  return null
-}
-
-function classify(text: string): DocumentKind | null {
-  const normalized = normalizeText(text)
-
-  if (normalized.includes('FICHA DE APRESENTACAO DE CASO')) return 'FICHA_C1'
-  if (normalized.includes('PEDIDO DE ROUPAS E DIVERSOS')) return 'FICHA_C1_VERSO'
-  if (normalized.includes('DECLARACAO DE TRANSITO')) return 'DECLARACAO_TRANSITO'
-  if (normalized.includes('RECIBO DE ATENDIMENTO') && normalized.includes('OBRA DA PIEDADE')) {
-    return 'RECIBO_EMERGENCIA_MANUAL'
-  }
-
-  // Envelope/recibo impresso: só classifica quando houver sinais simultâneos
-  // para evitar que números soltos provoquem uma classificação indevida.
-  const hasMeetingDate = /DATA\s+(?:DA\s+)?REUNIAO/.test(normalized)
-  const hasSequence = /SEQUENCIA|SEQ\.?/.test(normalized)
-  if (hasMeetingDate && hasSequence) return 'ENVELOPE'
-
-  return null
-}
-
-export function extractOcrFields(rawText: string): OcrFields {
-  const text = normalizeText(rawText)
-  const kind = classify(rawText)
-
-  const prontuarioRaw = firstMatch(text, [
-    /PRONTUARIO\s*[:#-]?\s*(\d{1,6})\b/,
-    /PRONT\.?\s*[:#-]?\s*(\d{1,6})\b/,
-  ])
-
-  const sequence = firstMatch(text, [
-    /SEQUENCIA\s*[:#-]?\s*(\d{4,8})\b/,
-    /SEQ\.?\s*[:#-]?\s*(\d{4,8})\b/,
-    /(?:N[Oº°]|NUMERO)\s+(?:DO\s+)?DOCUMENTO\s*[:#-]?\s*(\d{4,8})\b/,
-  ])
-
-  const meetingDate = firstMatch(text, [
-    /DATA\s+(?:DA\s+)?REUNIAO\s*[:#-]?\s*(\d{2}[\/.\-]\d{2}[\/.\-]\d{2,4})/,
-  ])
-
-  const anyDate = firstMatch(text, [
-    /\b(\d{2}[\/.\-]\d{2}[\/.\-]\d{4})\b/,
-    /\b(\d{2}[\/.\-]\d{2}[\/.\-]\d{2})\b/,
-  ])
-
-  const allDates = [...text.matchAll(/\b\d{2}[\/.\-]\d{2}[\/.\-]\d{2,4}\b/g)]
-    .map((match) => match[0].replaceAll('.', '/').replaceAll('-', '/'))
-  const uniqueDates = [...new Set(allDates)]
-  const normalizedDate = meetingDate
-    ? meetingDate.replaceAll('.', '/').replaceAll('-', '/')
-    : uniqueDates.length === 1
-      ? uniqueDates[0]
-      : null
-
-  return {
-    kind,
-    prontuario: prontuarioRaw ? normalizeProntuario(prontuarioRaw) : null,
-    numeroDocumento: sequence,
-    documentDate: normalizedDate,
-    // Os formulários C1 imprimem as duas palavras (Reunião/Emergência).
-    // Presença textual, portanto, não prova qual opção foi marcada.
-    caseMode: null,
-    isMonthly: /\bMENSAL\b/.test(text),
-  }
 }
 
 async function fileToCanvas(file: File): Promise<HTMLCanvasElement | File> {
