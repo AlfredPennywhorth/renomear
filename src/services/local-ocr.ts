@@ -13,6 +13,13 @@ export type OcrProgress = {
   progress?: number
 }
 
+const OCR_MIN_CONFIDENCE = 82
+
+function asset(path: string): string {
+  const base = import.meta.env.BASE_URL || './'
+  return base + path.replace(/^\//, '')
+}
+
 async function fileToCanvas(file: File): Promise<HTMLCanvasElement | File> {
   if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
     return file
