@@ -12,7 +12,7 @@ import { collectInconsistencies, downloadInconsistencyCsv } from './services/inc
 import { renameApprovedDocuments, type DirectoryHandleLike } from './services/local-rename'
 
 type PickerWindow = typeof window & {
-  showDirectoryPicker?: () => Promise<DirectoryHandleLike>
+  showDirectoryPicker?: (options?: { mode?: 'read' | 'readwrite' }) => Promise<DirectoryHandleLike>
 }
 
 function App() {
@@ -34,7 +34,8 @@ function App() {
     const counts = new Map<string, number>()
     for (const document of documents) {
       if (!document.suggestedName) continue
-      counts.set(document.suggestedName, (counts.get(document.suggestedName) ?? 0) + 1)
+      const normalized = document.suggestedName.toLocaleLowerCase('pt-BR')
+      counts.set(normalized, (counts.get(normalized) ?? 0) + 1)
     }
     return new Set(
       [...counts.entries()]
@@ -60,13 +61,13 @@ function App() {
     }
     const picker = (window as PickerWindow).showDirectoryPicker
     if (!picker) {
-      setMessage('Este navegador não oferece acesso direto a pastas. O modo alternativo será implementado antes do MVP.')
+      setMessage('Este navegador não é compatível com a homologação atual. Use Chrome ou Edge em computador.')
       return
     }
 
     try {
       setBusy(true)
-      const selectedDirectory = await picker()
+      const selectedDirectory = await picker({ mode: 'readwrite' })
       const listed = await listSupportedDocuments(selectedDirectory)
       setDirectory(selectedDirectory)
       setDocuments(applyCrossDocumentValidations(listed))
@@ -108,7 +109,9 @@ function App() {
     }
 
     const duplicateApproved = candidates.filter(
-      (document) => document.suggestedName && duplicateNames.has(document.suggestedName),
+      (document) =>
+        document.suggestedName &&
+        duplicateNames.has(document.suggestedName.toLocaleLowerCase('pt-BR')),
     )
     if (duplicateApproved.length > 0) {
       setMessage('Há nomes propostos duplicados entre os documentos aprovados. Corrija-os antes de renomear.')
@@ -268,7 +271,7 @@ function App() {
                       <td className="file-name">{document.originalName}</td>
                       <td>
                         {document.suggestedName ?? '—'}
-                        {document.suggestedName && duplicateNames.has(document.suggestedName) && (
+                        {document.suggestedName && duplicateNames.has(document.suggestedName.toLocaleLowerCase('pt-BR')) && (
                           <span className="duplicate-warning">Nome duplicado</span>
                         )}
                       </td>
