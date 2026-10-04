@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
 import BatchRenameConfirm from './components/BatchRenameConfirm'
-import DocumentPreview from './components/DocumentPreview'
+import DocumentReviewWorkspace from './components/DocumentReviewWorkspace'
 import HowToUse from './components/HowToUse'
 import QualityDashboard from './components/QualityDashboard'
-import ReviewPanel from './components/ReviewPanel'
 import SecurityNotice from './components/SecurityNotice'
 import type { AnalyzedDocument } from './domain/document'
 import { listSupportedDocuments } from './services/local-files'
+import { analyzeBatch, summarizeBatch } from './services/batch-processing'
 import { applyCrossDocumentValidations } from './services/cross-document-validation'
 import { collectInconsistencies, downloadInconsistencyCsv } from './services/inconsistency-report'
 import { renameApprovedDocuments, type DirectoryHandleLike } from './services/local-rename'
@@ -19,16 +19,15 @@ function App() {
   const [directory, setDirectory] = useState<DirectoryHandleLike | null>(null)
   const [documents, setDocuments] = useState<AnalyzedDocument[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [previewId, setPreviewId] = useState<string | null>(null)
   const [message, setMessage] = useState('Nenhuma pasta selecionada.')
   const [busy, setBusy] = useState(false)
   const [renameBusy, setRenameBusy] = useState(false)
+  const [processingBusy, setProcessingBusy] = useState(false)
   const [securityAccepted, setSecurityAccepted] = useState(false)
   const [batchCandidates, setBatchCandidates] = useState<AnalyzedDocument[]>([])
   const [activeView, setActiveView] = useState<'DOCUMENTOS' | 'DASHBOARD' | 'COMO_USAR'>('DOCUMENTOS')
 
   const selectedDocument = documents.find((document) => document.id === selectedId) ?? null
-  const previewDocument = documents.find((document) => document.id === previewId) ?? null
 
   const duplicateNames = useMemo(() => {
     const counts = new Map<string, number>()
@@ -72,7 +71,6 @@ function App() {
       setDirectory(selectedDirectory)
       setDocuments(applyCrossDocumentValidations(listed))
       setSelectedId(null)
-      setPreviewId(null)
       setMessage(listed.length === 0
         ? 'Nenhum PDF ou arquivo de imagem suportado foi encontrado.'
         : String(listed.length) + ' documento(s) encontrado(s). Nenhum arquivo foi enviado para servidor.')
@@ -93,6 +91,77 @@ function App() {
         current.map((document) => document.id === updated.id ? updated : document),
       ),
     )
+  }
+
+  const processBatch = async () => {
+    if (!directory || documents.length === 0) {
+      setMessage('Selecione uma pasta com documentos antes de processar o lote.')
+      return
+    }
+
+    try {
+      setProcessingBusy(true)
+      const analyzed = analyzeBatch(documents)
+      const summary = summarizeBatch(analyzed)
+
+      const nameCounts = new Map<string, number>()
+      for (const document of analyzed) {
+        if (!document.suggestedName) continue
+        const key = document.suggestedName.toLocaleLowerCase('pt-BR')
+        nameCounts.set(key, (nameCounts.get(key) ?? 0) + 1)
+      }
+
+      const automaticCandidates = analyzed.filter((document) => {
+        if (document.reviewStatus !== 'OK' || !document.suggestedName) return false
+        const key = document.suggestedName.toLocaleLowerCase('pt-BR')
+        return (nameCounts.get(key) ?? 0) === 1 && document.originalName !== document.suggestedName
+      })
+
+      let nextDocuments = analyzed
+      let renamed = 0
+      let renameErrors = 0
+
+      if (automaticCandidates.length > 0) {
+        const results = await renameApprovedDocuments(directory, automaticCandidates)
+        const byId = new Map(results.map((result) => [result.id, result]))
+        renamed = results.filter((result) => result.status === 'RENOMEADO').length
+        renameErrors = results.filter((result) => result.status === 'ERRO').length
+
+        nextDocuments = analyzed.map((document) => {
+          const result = byId.get(document.id)
+          if (!result) return document
+          if (result.status === 'RENOMEADO') {
+            return {
+              ...document,
+              originalName: result.to,
+              renameState: 'RENOMEADO' as const,
+              lastRenameError: null,
+            }
+          }
+          if (result.status === 'ERRO') {
+            return {
+              ...document,
+              reviewStatus: 'REVISAR' as const,
+              renameState: 'ERRO' as const,
+              lastRenameError: result.error ?? 'Falha ao renomear.',
+            }
+          }
+          return document
+        })
+      }
+
+      setDocuments(nextDocuments)
+      setMessage(
+        String(summary.total) + ' analisado(s): ' +
+        String(renamed) + ' renomeado(s) automaticamente; ' +
+        String(summary.revisar + renameErrors) + ' para revisão; ' +
+        String(summary.naoConformes) + ' não conforme(s).',
+      )
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Falha no processamento do lote.')
+    } finally {
+      setProcessingBusy(false)
+    }
   }
 
   const renameApproved = async () => {
@@ -208,17 +277,20 @@ function App() {
                 type="button"
                 className="secondary-button"
                 onClick={() => downloadInconsistencyCsv(inconsistencies)}
-                disabled={renameBusy}
+                disabled={renameBusy || processingBusy}
               >
                 Exportar inconsistências ({inconsistencies.length})
               </button>
             )}
             {directory && (
-              <button type="button" className="secondary-button" onClick={renameApproved} disabled={renameBusy}>
+              <button type="button" className="secondary-button" onClick={renameApproved} disabled={renameBusy || processingBusy}>
                 {renameBusy ? 'Renomeando…' : 'Renomear aprovados'}
               </button>
+              <button type="button" onClick={processBatch} disabled={processingBusy || renameBusy || documents.length === 0}>
+                {processingBusy ? 'Processando lote…' : 'Processar lote'}
+              </button>
             )}
-            <button type="button" onClick={selectFolder} disabled={busy || renameBusy || !securityAccepted}>
+            <button type="button" onClick={selectFolder} disabled={busy || renameBusy || processingBusy || !securityAccepted}>
               {busy ? 'Lendo pasta…' : directory ? 'Trocar pasta' : 'Selecionar pasta'}
             </button>
           </div>
@@ -283,14 +355,11 @@ function App() {
                         {!document.renameState && '—'}
                       </td>
                       <td className="row-actions">
-                        {directory && (
-                          <button className="table-action" type="button" onClick={() => setPreviewId(document.id)}>
-                            Visualizar
+                        {directory && document.renameState !== 'RENOMEADO' && (
+                          <button className="table-action" type="button" onClick={() => setSelectedId(document.id)}>
+                            Revisar
                           </button>
                         )}
-                        <button className="table-action" type="button" onClick={() => setSelectedId(document.id)}>
-                          Revisar
-                        </button>
                       </td>
                     </tr>
                   ))}
@@ -313,17 +382,15 @@ function App() {
         {activeView === 'COMO_USAR' && <HowToUse />}
       </section>
 
-      {selectedDocument && activeView === 'DOCUMENTOS' && (
+      {directory && selectedDocument && activeView === 'DOCUMENTOS' && (
         <>
-          <button className="drawer-backdrop" aria-label="Fechar revisão" onClick={() => setSelectedId(null)} />
-          <ReviewPanel document={selectedDocument} onClose={() => setSelectedId(null)} onChange={updateDocument} />
-        </>
-      )}
-
-      {directory && previewDocument && activeView === 'DOCUMENTOS' && (
-        <>
-          <button className="modal-backdrop" aria-label="Fechar visualização" onClick={() => setPreviewId(null)} />
-          <DocumentPreview directory={directory} fileName={previewDocument.originalName} onClose={() => setPreviewId(null)} />
+          <button className="modal-backdrop" aria-label="Fechar revisão" onClick={() => setSelectedId(null)} />
+          <DocumentReviewWorkspace
+            directory={directory}
+            document={selectedDocument}
+            onClose={() => setSelectedId(null)}
+            onChange={updateDocument}
+          />
         </>
       )}
 
