@@ -182,7 +182,7 @@ function App() {
   const renameApproved = async () => {
     if (!directory) return
     const candidates = documents.filter((document) =>
-      document.reviewStatus === 'OK' &&
+      (document.reviewStatus === 'OK' || isAutomaticRenameReady(document)) &&
       document.suggestedName &&
       document.originalName !== document.suggestedName
     )
@@ -300,7 +300,7 @@ function App() {
             {directory && (
               <>
                 <button type="button" className="secondary-button" onClick={renameApproved} disabled={renameBusy || processingBusy}>
-                  {renameBusy ? 'Renomeando…' : 'Renomear aprovados'}
+                  {renameBusy ? 'Renomeando…' : 'Renomear prontos'}
                 </button>
                 <button type="button" onClick={processBatch} disabled={processingBusy || renameBusy || documents.length === 0}>
                   {processingBusy ? 'Processando lote…' : 'Processar lote'}
@@ -372,7 +372,7 @@ function App() {
                         {!document.renameState && '—'}
                       </td>
                       <td className="row-actions">
-                        {directory && document.renameState !== 'RENOMEADO' && (
+                        {directory && (
                           <button className="table-action" type="button" onClick={() => setSelectedId(document.id)}>
                             Revisar
                           </button>
