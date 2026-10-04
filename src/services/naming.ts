@@ -2,7 +2,8 @@ import type { AnalyzedDocument, DocumentKind } from '../domain/document'
 import { normalizeProntuario } from '../domain/prontuario'
 
 const KIND_LABEL: Record<DocumentKind, string> = {
-  FICHA_C1: 'ficha_c1',
+  FICHA_C1: 'c1_frente',
+  FICHA_C1_VERSO: 'c1_verso',
   ENVELOPE: 'env_frente',
   RECIBO_ATENDIMENTO: 'recibo',
   DECLARACAO_TRANSITO: 'dt',
