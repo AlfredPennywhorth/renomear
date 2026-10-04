@@ -34,13 +34,32 @@ function ReviewPanel({ document, onClose, onChange }: Props) {
 
   const setStatus = (status: ReviewStatus) => update({ reviewStatus: status })
 
+  const sequenceRequired =
+    document.kind === 'ENVELOPE' ||
+    document.kind === 'RECIBO_ATENDIMENTO' ||
+    document.kind === 'DECLARACAO_TRANSITO'
+
   const sequenceValidation = document.numeroDocumento
     ? validateSequence(document.numeroDocumento)
-    : { ok: document.kind !== 'ENVELOPE', normalized: null, reason: 'Sequência obrigatória para envelope.' }
+    : {
+        ok: !sequenceRequired,
+        normalized: null,
+        reason: 'Número/sequência obrigatória para este tipo documental.',
+      }
+
+  const dateRequired =
+    document.kind === 'ENVELOPE' ||
+    document.kind === 'RECIBO_ATENDIMENTO' ||
+    document.kind === 'FICHA_C1' ||
+    document.kind === 'DECLARACAO_TRANSITO'
 
   const dateValidation = document.documentDate
     ? validateBrazilianDate(document.documentDate)
-    : { ok: document.kind !== 'ENVELOPE', normalized: null, reason: 'Data obrigatória para envelope.' }
+    : {
+        ok: !dateRequired,
+        normalized: null,
+        reason: 'Data obrigatória para este tipo documental.',
+      }
 
   const prontuarioValidation = document.prontuario
     ? normalizeProntuario(document.prontuario) !== null
@@ -55,6 +74,7 @@ function ReviewPanel({ document, onClose, onChange }: Props) {
     prontuarioValidation &&
     sequenceValidation.ok &&
     dateValidation.ok &&
+    (document.kind !== 'FICHA_C1' || document.caseMode !== null) &&
     !hasBlockingValidation
 
   return (
@@ -204,7 +224,7 @@ function ReviewPanel({ document, onClose, onChange }: Props) {
           type="button"
           onClick={() => setStatus('OK')}
           disabled={!canApprove}
-          title={!canApprove ? 'Corrija os campos obrigatórios antes de aprovar.' : undefined}
+          title={!canApprove ? 'Corrija os campos obrigatórios, a marcação da C1 e as validações pendentes antes de aprovar.' : undefined}
         >
           Aprovar como OK
         </button>
