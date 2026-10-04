@@ -7,6 +7,7 @@ type Props = {
   document: AnalyzedDocument
   onClose: () => void
   onChange: (document: AnalyzedDocument) => void
+  embedded?: boolean
 }
 
 const kindOptions: Array<{ value: DocumentKind; label: string }> = [
@@ -19,7 +20,7 @@ const kindOptions: Array<{ value: DocumentKind; label: string }> = [
   { value: 'NAO_PADRONIZADO', label: 'Documento não padronizado' },
 ]
 
-function ReviewPanel({ document, onClose, onChange }: Props) {
+function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
   const update = (patch: Partial<AnalyzedDocument>) => {
     const next = { ...document, ...patch }
     next.suggestedName = suggestFileName(next)
@@ -82,7 +83,7 @@ function ReviewPanel({ document, onClose, onChange }: Props) {
     !hasBlockingValidation
 
   return (
-    <aside className="review-drawer" aria-label="Revisão do documento">
+    <aside className={embedded ? 'review-drawer review-drawer-embedded' : 'review-drawer'} aria-label="Revisão do documento">
       <div className="review-header">
         <div>
           <p className="eyebrow">Revisão manual</p>
