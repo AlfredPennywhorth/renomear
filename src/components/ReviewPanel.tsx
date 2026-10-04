@@ -1,5 +1,6 @@
 import type { AnalyzedDocument, DocumentKind, ReviewStatus } from '../domain/document'
 import { normalizeProntuario } from '../domain/prontuario'
+import { validateBrazilianDate, validateSequence } from '../domain/validation'
 import { suggestFileName } from '../services/naming'
 
 type Props = {
@@ -31,6 +32,24 @@ function ReviewPanel({ document, onClose, onChange }: Props) {
   }
 
   const setStatus = (status: ReviewStatus) => update({ reviewStatus: status })
+
+  const sequenceValidation = document.numeroDocumento
+    ? validateSequence(document.numeroDocumento)
+    : { ok: document.kind !== 'ENVELOPE', normalized: null, reason: 'Sequência obrigatória para envelope.' }
+
+  const dateValidation = document.documentDate
+    ? validateBrazilianDate(document.documentDate)
+    : { ok: document.kind !== 'ENVELOPE', normalized: null, reason: 'Data obrigatória para envelope.' }
+
+  const prontuarioValidation = document.prontuario
+    ? normalizeProntuario(document.prontuario) !== null
+    : false
+
+  const canApprove =
+    Boolean(document.suggestedName) &&
+    prontuarioValidation &&
+    sequenceValidation.ok &&
+    dateValidation.ok
 
   return (
     <aside className="review-drawer" aria-label="Revisão do documento">
@@ -74,8 +93,10 @@ function ReviewPanel({ document, onClose, onChange }: Props) {
             inputMode="numeric"
             value={document.numeroDocumento ?? ''}
             placeholder="Ex.: 054831"
+            aria-invalid={!sequenceValidation.ok}
             onChange={(event) => update({ numeroDocumento: event.target.value })}
           />
+          {!sequenceValidation.ok && <small className="field-error">{sequenceValidation.reason}</small>}
         </label>
 
         <label>
@@ -85,8 +106,10 @@ function ReviewPanel({ document, onClose, onChange }: Props) {
             inputMode="numeric"
             value={document.documentDate ?? ''}
             placeholder="DD/MM/AAAA"
+            aria-invalid={!dateValidation.ok}
             onChange={(event) => update({ documentDate: event.target.value })}
           />
+          {!dateValidation.ok && <small className="field-error">{dateValidation.reason}</small>}
         </label>
       </div>
 
@@ -129,8 +152,8 @@ function ReviewPanel({ document, onClose, onChange }: Props) {
         <button
           type="button"
           onClick={() => setStatus('OK')}
-          disabled={!document.suggestedName}
-          title={!document.suggestedName ? 'Preencha os campos necessários antes de aprovar.' : undefined}
+          disabled={!canApprove}
+          title={!canApprove ? 'Corrija os campos obrigatórios antes de aprovar.' : undefined}
         >
           Aprovar como OK
         </button>
