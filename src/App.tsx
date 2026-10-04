@@ -5,6 +5,7 @@ import ReviewPanel from './components/ReviewPanel'
 import SecurityNotice from './components/SecurityNotice'
 import type { AnalyzedDocument } from './domain/document'
 import { listSupportedDocuments } from './services/local-files'
+import { applyCrossDocumentValidations } from './services/cross-document-validation'
 import { renameApprovedDocuments, type DirectoryHandleLike } from './services/local-rename'
 
 type PickerWindow = typeof window & {
@@ -62,7 +63,7 @@ function App() {
       const selectedDirectory = await picker()
       const listed = await listSupportedDocuments(selectedDirectory)
       setDirectory(selectedDirectory)
-      setDocuments(listed)
+      setDocuments(applyCrossDocumentValidations(listed))
       setSelectedId(null)
       setPreviewId(null)
       setMessage(listed.length === 0
@@ -80,7 +81,11 @@ function App() {
   }
 
   const updateDocument = (updated: AnalyzedDocument) => {
-    setDocuments((current) => current.map((document) => document.id === updated.id ? updated : document))
+    setDocuments((current) =>
+      applyCrossDocumentValidations(
+        current.map((document) => document.id === updated.id ? updated : document),
+      ),
+    )
   }
 
   const renameApproved = async () => {
