@@ -50,8 +50,9 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
       'isMonthly',
     ])
     const changedAuditInput = Object.keys(patch).some((key) => editableFields.has(key))
-    if (changedAuditInput && document.reviewStatus === 'OK' && patch.reviewStatus === undefined) {
-      next.reviewStatus = 'REVISAR'
+    if (changedAuditInput && patch.reviewStatus === undefined) {
+      next.manualReviewApproved = false
+      if (document.reviewStatus === 'OK') next.reviewStatus = 'REVISAR'
     }
     next.suggestedName = suggestFileName(next)
     onChange(next)
@@ -81,6 +82,7 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
     if (status === 'OK') {
       update({
         reviewStatus: 'OK',
+        manualReviewApproved: true,
         validations: document.validations.filter(
           (item) =>
             item.id !== 'automation-rule-coverage' &&
@@ -94,7 +96,7 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
       })
       return
     }
-    update({ reviewStatus: status })
+    update({ reviewStatus: status, manualReviewApproved: false })
   }
 
   const sequenceRequired =
@@ -200,6 +202,7 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
             onChange={(event) => update({
               numeroDocumento: event.target.value,
               numeroDocumentoConfidence: event.target.value ? 1 : null,
+              numeroDocumentoOcrSource: event.target.value ? 'MANUAL' : null,
             })}
           />
           {!sequenceValidation.ok && <small className="field-error">{sequenceValidation.reason}</small>}
