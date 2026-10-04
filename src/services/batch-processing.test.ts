@@ -68,19 +68,21 @@ describe('analyzeBatch', () => {
     expect(result.reviewStatus).toBe('NAO_CONFORME')
   })
 
-  it('não renomeia automaticamente tipo sem cobertura liberada', () => {
+  it('permite renomear C1 com identidade segura mesmo com auditoria pendente', () => {
     const [result] = analyzeBatch([
       doc({
         kind: 'FICHA_C1',
         prontuario: '2103',
+        prontuarioConfidence: 0.95,
+        prontuarioOcrSource: 'CONSENSUS',
         documentDate: '23/09/2026',
         caseMode: 'REUNIAO',
-        confidence: 0.91,
+        confidence: 0.55,
       }),
     ])
 
     expect(result.reviewStatus).toBe('REVISAR')
-    expect(isAutomaticRenameReady(result)).toBe(false)
+    expect(isAutomaticRenameReady(result)).toBe(true)
   })
 
   it('não libera renomeação automática de documento não conforme', () => {
@@ -98,18 +100,21 @@ describe('analyzeBatch', () => {
     expect(isAutomaticRenameReady(result)).toBe(false)
   })
 
-  it('não libera DT sem data válida para renomeação automática', () => {
+  it('não usa a data como requisito para salvar o nome do arquivo', () => {
     const result = doc({
       kind: 'DECLARACAO_TRANSITO',
       prontuario: '001990',
+      prontuarioConfidence: 0.96,
+      prontuarioOcrSource: 'PADDLE',
       numeroDocumento: '013068',
+      numeroDocumentoConfidence: 0.94,
       documentDate: null,
-      confidence: 0.95,
+      confidence: 0.55,
       suggestedName: '001990_013068_dt.jpg',
       reviewStatus: 'REVISAR',
     })
 
-    expect(isAutomaticRenameReady(result)).toBe(false)
+    expect(isAutomaticRenameReady(result)).toBe(true)
   })
 
   it('rebaixa OK quando nova validação cruzada vira não conforme', () => {
@@ -133,6 +138,9 @@ describe('analyzeBatch', () => {
       numeroDocumento: '013068',
       documentDate: '02/09/2026',
       confidence: 0.95,
+      prontuarioConfidence: 0.95,
+      prontuarioOcrSource: 'CONSENSUS',
+      numeroDocumentoConfidence: 0.95,
       suggestedName: '001990_013068_dt.pdf',
       reviewStatus: 'REVISAR',
       validations: [{
@@ -153,6 +161,9 @@ describe('analyzeBatch', () => {
       numeroDocumento: '013068',
       documentDate: '02/09/2026',
       confidence: 0.95,
+      prontuarioConfidence: 0.95,
+      prontuarioOcrSource: 'CONSENSUS',
+      numeroDocumentoConfidence: 0.95,
       suggestedName: '001990_013068_dt.jpg',
       reviewStatus: 'REVISAR',
       validations: [{
@@ -180,20 +191,16 @@ describe('analyzeBatch', () => {
     expect(result.reviewStatus).toBe('REVISAR')
   })
 
-  it('não libera renomeação automática com baixa confiança OCR', () => {
+  it('não libera renomeação automática com baixa confiança do prontuário', () => {
     const [result] = analyzeBatch([
       doc({
         kind: 'FICHA_C1',
         prontuario: '2103',
+        prontuarioConfidence: 0.55,
+        prontuarioOcrSource: 'TESSERACT',
         documentDate: '23/09/2026',
         caseMode: 'REUNIAO',
-        confidence: 0.55,
-        validations: [{
-          id: 'ocr-confidence',
-          label: 'Confiança',
-          value: '55%',
-          status: 'REVISAR',
-        }],
+        confidence: 0.95,
       }),
     ])
 
