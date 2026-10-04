@@ -3,6 +3,7 @@ import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist'
 import type { AnalyzedDocument } from '../domain/document'
 import { suggestFileName } from './naming'
 import { extractOcrFields } from './ocr-extraction'
+import { detectDocumentOrientation, extractCalibratedFields } from './document-calibration'
 import type { DirectoryHandleLike } from './local-rename'
 
 export type OcrProgress = {
@@ -13,32 +14,48 @@ export type OcrProgress = {
   progress?: number
 }
 
-const OCR_MIN_CONFIDENCE = 82
+const OCR_MIN_CONFIDENCE = 72
 
 function asset(path: string): string {
   const base = import.meta.env.BASE_URL || './'
   return base + path.replace(/^\//, '')
 }
 
-async function fileToCanvas(file: File): Promise<HTMLCanvasElement | File> {
-  if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
-    return file
+function createCanvas(width: number, height: number): HTMLCanvasElement {
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(width))
+  canvas.height = Math.max(1, Math.round(height))
+  return canvas
+}
+
+async function fileToCanvas(file: File): Promise<HTMLCanvasElement> {
+  if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
+    GlobalWorkerOptions.workerSrc = asset('pdf/pdf.worker.min.mjs')
+    const bytes = new Uint8Array(await file.arrayBuffer())
+    const pdf = await getDocument({ data: bytes }).promise
+    const page = await pdf.getPage(1)
+    const viewport = page.getViewport({ scale: 2 })
+    const canvas = createCanvas(viewport.width, viewport.height)
+    const context = canvas.getContext('2d', { alpha: false })
+    if (!context) throw new Error('Não foi possível preparar o PDF para OCR.')
+    context.fillStyle = '#fff'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    await page.render({ canvas, canvasContext: context, viewport }).promise
+    return canvas
   }
 
-  GlobalWorkerOptions.workerSrc = asset('pdf/pdf.worker.min.mjs')
-  const bytes = new Uint8Array(await file.arrayBuffer())
-  const pdf = await getDocument({ data: bytes }).promise
-  const page = await pdf.getPage(1)
-  const viewport = page.getViewport({ scale: 2 })
-  const canvas = document.createElement('canvas')
-  canvas.width = Math.ceil(viewport.width)
-  canvas.height = Math.ceil(viewport.height)
-  const context = canvas.getContext('2d', { alpha: false })
-
-  if (!context) throw new Error('Não foi possível preparar o PDF para OCR.')
-
-  await page.render({ canvas, canvasContext: context, viewport }).promise
-  return canvas
+  const bitmap = await createImageBitmap(file)
+  try {
+    const canvas = createCanvas(bitmap.width, bitmap.height)
+    const context = canvas.getContext('2d', { alpha: false })
+    if (!context) throw new Error('Não foi possível preparar a imagem para OCR.')
+    context.fillStyle = '#fff'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    context.drawImage(bitmap, 0, 0)
+    return canvas
+  } finally {
+    bitmap.close()
+  }
 }
 
 async function createLocalWorker(
@@ -95,7 +112,7 @@ export async function analyzeDocumentsWithLocalOcr(
         current: index + 1,
         total: documents.length,
         fileName: current.originalName,
-        status: 'Preparando documento',
+        status: 'Detectando orientação',
       })
 
       try {
@@ -121,23 +138,56 @@ export async function analyzeDocumentsWithLocalOcr(
         }
 
         const input = await fileToCanvas(file)
-        const result = await worker.recognize(input, { rotateAuto: true })
+        const oriented = await detectDocumentOrientation(worker, input)
+
+        onProgress?.({
+          current: index + 1,
+          total: documents.length,
+          fileName: current.originalName,
+          status: oriented.rotation === 0
+            ? 'Lendo documento'
+            : 'Orientação corrigida em memória: ' + oriented.rotation + '°',
+        })
+
+        await worker.setParameters({
+          tessedit_pageseg_mode: PSM.AUTO,
+          preserve_interword_spaces: '1',
+          tessedit_char_whitelist: '',
+        })
+        const result = await worker.recognize(oriented.canvas)
         const confidence = Number.isFinite(result.data.confidence) ? result.data.confidence : 0
         const fields = extractOcrFields(result.data.text)
+        const calibrated = await extractCalibratedFields(worker, oriented.canvas, fields.kind)
 
         const next: AnalyzedDocument = {
           ...current,
           kind: fields.kind ?? current.kind,
-          prontuario: fields.prontuario ?? current.prontuario,
+          prontuario: calibrated.prontuario ?? fields.prontuario ?? current.prontuario,
           numeroDocumento: fields.numeroDocumento ?? current.numeroDocumento,
-          documentDate: fields.documentDate ?? current.documentDate,
-          caseMode: fields.caseMode ?? current.caseMode,
+          documentDate: calibrated.documentDate ?? fields.documentDate ?? current.documentDate,
+          caseMode: calibrated.caseMode ?? fields.caseMode ?? current.caseMode,
           isMonthly: fields.isMonthly || current.isMonthly,
           confidence: confidence / 100,
-          validations: current.validations.filter((item) => item.id !== 'ocr-confidence'),
+          rotationDegrees: oriented.rotation,
+          validations: current.validations.filter(
+            (item) => item.id !== 'ocr-confidence' && item.id !== 'ocr-orientation',
+          ),
         }
 
         next.suggestedName = suggestFileName(next)
+
+        if (oriented.rotation !== 0) {
+          next.validations = [
+            ...next.validations,
+            {
+              id: 'ocr-orientation',
+              label: 'Orientação do arquivo',
+              value: oriented.rotation + '°',
+              status: 'OK',
+              note: 'A orientação foi corrigida em memória para leitura e será aplicada quando o arquivo for renomeado.',
+            },
+          ]
+        }
 
         if (confidence < OCR_MIN_CONFIDENCE || !fields.kind) {
           next.validations = [
