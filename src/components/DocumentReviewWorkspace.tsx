@@ -19,15 +19,20 @@ function DocumentReviewWorkspace({ directory, document, onClose, onChange }: Pro
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
   const dialogRef = useRef<HTMLElement>(null)
+  const onCloseRef = useRef(onClose)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useEffect(() => {
     dialogRef.current?.focus()
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') onCloseRef.current()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
+  }, [])
 
   useEffect(() => {
     let objectUrl: string | null = null
