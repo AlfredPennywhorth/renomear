@@ -116,11 +116,17 @@ export function isAutomaticRenameReady(document: AnalyzedDocument): boolean {
   if (document.kind === 'NAO_PADRONIZADO') return false
   if (!normalizeProntuario(document.prontuario)) return false
 
+  const prontuarioThreshold =
+    document.prontuarioOcrSource === 'MANUAL'
+      ? 1
+      : document.prontuarioOcrSource === 'CONSENSUS'
+        ? 0.55
+        : 0.84
   const prontuarioConfidence =
     document.prontuarioOcrSource === 'MANUAL'
       ? 1
       : document.prontuarioConfidence ?? 0
-  if (prontuarioConfidence < 0.84) return false
+  if (prontuarioConfidence < prontuarioThreshold) return false
 
   const sequenceRequired =
     document.kind === 'ENVELOPE' ||
