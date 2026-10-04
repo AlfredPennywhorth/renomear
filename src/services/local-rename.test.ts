@@ -21,7 +21,12 @@ function makeDocument(overrides: Partial<AnalyzedDocument> = {}): AnalyzedDocume
 }
 
 function makeFile(name: string, bytes: Uint8Array): File {
-  return new File([bytes], name, { type: 'application/octet-stream' })
+  const copy = Uint8Array.from(bytes)
+  return {
+    name,
+    size: copy.byteLength,
+    arrayBuffer: async () => copy.buffer.slice(0) as ArrayBuffer,
+  } as unknown as File
 }
 
 function fakeDirectory(initial: Record<string, Uint8Array>, corruptWrites = false) {
