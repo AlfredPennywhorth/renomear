@@ -3,9 +3,13 @@ import { extractOcrFields } from './ocr-extraction'
 
 describe('extractOcrFields — Declaração de trânsito', () => {
   it('extrai prontuário e número da DT quando o cabeçalho usa Nº', () => {
-    const result = extractOcrFields(
-      'CONGREGAÇÃO CRISTÃ NO BRASIL\\nDeclaração de trânsito\\nNº 003604\\n05/10/2024\\nProntuário 001072',
-    )
+    const result = extractOcrFields(`
+CONGREGAÇÃO CRISTÃ NO BRASIL
+Declaração de trânsito
+Nº 003604
+05/10/2024
+Prontuário 001072
+`)
 
     expect(result.kind).toBe('DECLARACAO_TRANSITO')
     expect(result.numeroDocumento).toBe('003604')
