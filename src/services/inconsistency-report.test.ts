@@ -51,6 +51,24 @@ describe('collectInconsistencies', () => {
     expect(rows).toEqual([])
   })
 
+  it('neutraliza células que poderiam ser interpretadas como fórmula', () => {
+    const csv = buildInconsistencyCsv([
+      {
+        prontuario: '004354',
+        arquivo: '=HYPERLINK("https://exemplo.invalid")',
+        tipo: 'Ficha C1 - frente',
+        gravidade: 'REVISAR',
+        inconsistencia: '+SUM(1,1)',
+        valorIdentificado: '-10',
+        observacao: '@comando',
+      },
+    ])
+    expect(csv).toContain("'=HYPERLINK")
+    expect(csv).toContain("'+SUM")
+    expect(csv).toContain("'-10")
+    expect(csv).toContain("'@comando")
+  })
+
   it('gera CSV com cabeçalho e dados', () => {
     const csv = buildInconsistencyCsv([
       {
