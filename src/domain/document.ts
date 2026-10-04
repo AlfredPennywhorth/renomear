@@ -8,6 +8,8 @@ export type DocumentKind =
 
 export type CaseMode = 'REUNIAO' | 'EMERGENCIA'
 
+export type InkZoneStatus = 'AZUL' | 'VERMELHA' | 'OUTRA' | 'NAO_IDENTIFICADA'
+
 export type ReviewStatus = 'PENDENTE' | 'OK' | 'REVISAR' | 'NAO_CONFORME'
 
 export type FieldStatus = 'OK' | 'REVISAR' | 'NAO_CONFORME' | 'NAO_AVALIADO'
@@ -33,6 +35,10 @@ export interface AnalyzedDocument {
   signatureDate?: string | null
   caseMode: CaseMode | null
   isMonthly: boolean
+  pageIndex?: number | null
+  pageCount?: number | null
+  upperInk?: InkZoneStatus | null
+  lowerInk?: InkZoneStatus | null
   suggestedName: string | null
   confidence: number | null
   reviewStatus: ReviewStatus
