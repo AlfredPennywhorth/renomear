@@ -366,3 +366,54 @@ O carimbo não deve ser procurado no envelope/recibo para esta regra, pelas regr
 A regra não se aplica aos atendimentos identificados como **Mensal**, pois nesse caso não é esperada Ficha C1 correspondente.
 
 Detalhamento em `docs/REGRA_VALOR_TOTAL_APROVADO.md`.
+
+
+## Recibo manual de emergência
+
+Identificação principal: cabeçalho **RECIBO DE ATENDIMENTO — OBRA DA PIEDADE**.
+
+Regiões de interesse:
+
+- prontuário;
+- data do atendimento;
+- valor;
+- localidade/setor;
+- nome do atendido;
+- responsável pelo atendimento;
+- campo de adiantamento/comprovantes;
+- campo "foi deixado com a família...";
+- assinatura do atendido.
+
+### Regra de vínculo da emergência
+
+O atendimento de emergência deve formar uma cadeia documental coerente:
+
+1. **Recibo manual de emergência** — registra a data real em que o atendimento emergencial ocorreu e deve conter a assinatura do atendido.
+2. **Ficha C1 marcada como EMERGÊNCIA** — deve usar a **data do atendimento emergencial**, isto é, a mesma data do recibo manual.
+3. **Envelope/recibo da reunião** — usa a **Data da Reunião**, posterior à emergência, e deve indicar que o valor/contexto se refere a **EMERGÊNCIA**.
+
+Validação esperada:
+
+- data C1 emergência = data do recibo manual;
+- data C1 emergência < Data da Reunião do envelope/recibo;
+- envelope/recibo deve apresentar indicação de emergência;
+- ausência da assinatura no envelope é aceitável quando houver recibo manual assinado e/ou carimbo institucional correspondente;
+- se o recibo manual não trouxer prontuário, não associá-lo automaticamente apenas por proximidade dos arquivos.
+
+### Associação do recibo manual sem prontuário
+
+Quando o campo de prontuário do recibo manual estiver em branco, o Renomear pode usar nome do atendido, data e valor como sinais auxiliares, mas não como chave definitiva. Se não houver correspondência inequívoca com uma C1 de emergência, exigir associação humana.
+
+Após associação segura, o recibo manual poderá receber nome baseado no prontuário vinculado, por exemplo:
+
+`PRONTUARIO_rec_emergencia.ext`
+
+### Amostra de calibração recebida
+
+No conjunto recebido:
+
+- recibo manual: data 01/02/2026, valor R$ 1.000,00, assinatura do atendido presente e prontuário em branco;
+- C1: marcada como EMERGÊNCIA, prontuário manuscrito 4354 -> 004354;
+- envelope/recibo: prontuário 004354, Data da Reunião 18/02/2026, sequência 051128 e indicação "Emergência" no bloco de valores.
+
+A amostra deve ser usada também para detectar inconsistências de procedimento: se a C1 de emergência estiver preenchida com a data da reunião em vez da data real do atendimento, o Renomear deverá sinalizar **NÃO CONFORME** quando o recibo manual permitir demonstrar a data correta da emergência.
