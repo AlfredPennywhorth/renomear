@@ -169,5 +169,55 @@ export async function extractCalibratedFields(
     }
   }
 
+  if (kind === 'ENVELOPE' || kind === 'RECIBO_ATENDIMENTO') {
+    // Modelo Obra da Piedade do lote 04/10/2026:
+    // prontuário, data da reunião e sequência ficam empilhados no canto superior direito.
+    const prontuarioRegion = cropCanvas(canvas, 0.84, 0.055, 0.16, 0.055)
+    const dateRegion = cropCanvas(canvas, 0.84, 0.095, 0.16, 0.055)
+    const sequenceRegion = cropCanvas(canvas, 0.84, 0.125, 0.16, 0.055)
+
+    const [prontuarioResult, dateResult, sequenceResult] = await Promise.all([
+      recognize(worker, prontuarioRegion, PSM.SINGLE_LINE, '0123456789'),
+      recognize(worker, dateRegion, PSM.SINGLE_LINE, '0123456789/.-'),
+      recognize(worker, sequenceRegion, PSM.SINGLE_LINE, '0123456789'),
+    ])
+
+    const rawProntuario = digitsOnly(prontuarioResult.data.text)
+    const rawSequence = digitsOnly(sequenceResult.data.text)
+
+    return {
+      prontuario: rawProntuario.length >= 1 && rawProntuario.length <= 6
+        ? normalizeProntuario(rawProntuario)
+        : null,
+      documentDate: dateFromText(dateResult.data.text),
+      numeroDocumento: rawSequence.length >= 4 && rawSequence.length <= 8 ? rawSequence : null,
+    }
+  }
+
+  if (kind === 'DECLARACAO_TRANSITO') {
+    // Modelo Declaração de Trânsito do lote 04/10/2026:
+    // número da DT e data ficam no quadro superior direito; prontuário na faixa Destinatário.
+    const numeroRegion = cropCanvas(canvas, 0.69, 0.12, 0.27, 0.075)
+    const dateRegion = cropCanvas(canvas, 0.72, 0.165, 0.22, 0.055)
+    const prontuarioRegion = cropCanvas(canvas, 0.16, 0.255, 0.23, 0.06)
+
+    const [numeroResult, dateResult, prontuarioResult] = await Promise.all([
+      recognize(worker, numeroRegion, PSM.SINGLE_LINE, '0123456789'),
+      recognize(worker, dateRegion, PSM.SINGLE_LINE, '0123456789/.-'),
+      recognize(worker, prontuarioRegion, PSM.SINGLE_LINE, '0123456789'),
+    ])
+
+    const rawNumero = digitsOnly(numeroResult.data.text)
+    const rawProntuario = digitsOnly(prontuarioResult.data.text)
+
+    return {
+      numeroDocumento: rawNumero.length >= 4 && rawNumero.length <= 8 ? rawNumero : null,
+      documentDate: dateFromText(dateResult.data.text),
+      prontuario: rawProntuario.length >= 1 && rawProntuario.length <= 6
+        ? normalizeProntuario(rawProntuario)
+        : null,
+    }
+  }
+
   return {}
 }
