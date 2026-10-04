@@ -13,6 +13,7 @@ const kindOptions: Array<{ value: DocumentKind; label: string }> = [
   { value: 'ENVELOPE', label: 'Envelope — frente' },
   { value: 'FICHA_C1', label: 'Ficha C1' },
   { value: 'RECIBO_ATENDIMENTO', label: 'Recibo de atendimento' },
+  { value: 'DECLARACAO_TRANSITO', label: 'Declaração de trânsito' },
   { value: 'NAO_PADRONIZADO', label: 'Documento não padronizado' },
 ]
 
@@ -45,11 +46,16 @@ function ReviewPanel({ document, onClose, onChange }: Props) {
     ? normalizeProntuario(document.prontuario) !== null
     : false
 
+  const hasBlockingValidation = document.validations.some(
+    (item) => item.status === 'REVISAR' || item.status === 'NAO_CONFORME',
+  )
+
   const canApprove =
     Boolean(document.suggestedName) &&
     prontuarioValidation &&
     sequenceValidation.ok &&
-    dateValidation.ok
+    dateValidation.ok &&
+    !hasBlockingValidation
 
   return (
     <aside className="review-drawer" aria-label="Revisão do documento">
@@ -112,6 +118,51 @@ function ReviewPanel({ document, onClose, onChange }: Props) {
           {!dateValidation.ok && <small className="field-error">{dateValidation.reason}</small>}
         </label>
       </div>
+
+      {document.kind === 'FICHA_C1' && (
+        <section className="document-rules">
+          <h3>Tipo do atendimento na C1</h3>
+          <div className="choice-row">
+            <label>
+              <input
+                type="radio"
+                name={'case-mode-' + document.id}
+                checked={document.caseMode === 'REUNIAO'}
+                onChange={() => update({ caseMode: 'REUNIAO' })}
+              />
+              Reunião
+            </label>
+            <label>
+              <input
+                type="radio"
+                name={'case-mode-' + document.id}
+                checked={document.caseMode === 'EMERGENCIA'}
+                onChange={() => update({ caseMode: 'EMERGENCIA' })}
+              />
+              Emergência
+            </label>
+          </div>
+          <small>
+            Reunião exige data igual à do envelope/recibo correspondente. Emergência exige data anterior à reunião.
+          </small>
+        </section>
+      )}
+
+      {(document.kind === 'ENVELOPE' || document.kind === 'RECIBO_ATENDIMENTO') && (
+        <section className="document-rules">
+          <label className="monthly-check">
+            <input
+              type="checkbox"
+              checked={document.isMonthly}
+              onChange={(event) => update({ isMonthly: event.target.checked })}
+            />
+            <span>Atendimento mensal</span>
+          </label>
+          <small>
+            Quando houver indicação “mensal”, não é esperada Ficha C1 correspondente e não será feito o cruzamento com C1.
+          </small>
+        </section>
+      )}
 
       <section className="rename-preview">
         <span>Nome proposto</span>
