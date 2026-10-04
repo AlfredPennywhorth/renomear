@@ -65,6 +65,14 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
       prontuario: normalized,
       prontuarioConfidence: normalized ? 1 : null,
       prontuarioOcrSource: normalized ? 'MANUAL' : null,
+      validations: normalized
+        ? document.validations.filter(
+            (item) =>
+              item.id !== 'ocr-prontuario-conflict' &&
+              item.id !== 'ocr-identity-confidence' &&
+              item.id !== 'ocr-paddle-unavailable',
+          )
+        : document.validations,
       reviewStatus: 'REVISAR',
     })
   }
