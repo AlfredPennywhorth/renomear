@@ -43,7 +43,18 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
     })
   }
 
-  const setStatus = (status: ReviewStatus) => update({ reviewStatus: status })
+  const setStatus = (status: ReviewStatus) => {
+    if (status === 'OK') {
+      update({
+        reviewStatus: 'OK',
+        validations: document.validations.filter(
+          (item) => item.id !== 'automation-rule-coverage' && item.id !== 'ocr-confidence',
+        ),
+      })
+      return
+    }
+    update({ reviewStatus: status })
+  }
 
   const sequenceRequired =
     document.kind === 'ENVELOPE' ||
@@ -77,8 +88,11 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
     ? normalizeProntuario(document.prontuario) !== null
     : document.kind === 'FICHA_C1_VERSO'
 
+  const humanResolvable = new Set(['automation-rule-coverage', 'ocr-confidence'])
   const hasBlockingValidation = document.validations.some(
-    (item) => item.status === 'REVISAR' || item.status === 'NAO_CONFORME',
+    (item) =>
+      !humanResolvable.has(item.id) &&
+      (item.status === 'REVISAR' || item.status === 'NAO_CONFORME'),
   )
 
   const canApprove =
@@ -207,7 +221,7 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
         <div className="section-heading">
           <div>
             <h3>Verificações</h3>
-            <p>As verificações automáticas aparecerão aqui quando o classificador/OCR for integrado.</p>
+            <p>Alertas automáticos podem ser resolvidos pela conferência humana; não conformidades e cruzamentos continuam bloqueando a aprovação.</p>
           </div>
         </div>
 
