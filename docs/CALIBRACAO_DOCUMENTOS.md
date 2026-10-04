@@ -238,3 +238,118 @@ Validação prevista:
 A cor não pode ser validada de modo confiável em digitalizações em escala de cinza, preto e branco, baixa saturação, iluminação deficiente ou scanner que altere significativamente as cores. Nesses casos, o sistema **não deve presumir conformidade nem não conformidade**; deve apresentar **REVISAR** e informar que a cor não pôde ser confirmada.
 
 A validação de cor deve ocorrer sobre regiões específicas da ficha e não sobre a página inteira, porque carimbos, logotipos, impressão gráfica e marcas de conferência podem usar outras cores.
+
+
+## Rotina administrativa e carimbos
+
+A imagem institucional "Obra da Piedade — Rotinas Administrativas — Fluxo dos Documentos" acrescenta regras úteis para conferência documental e para reconhecimento de carimbos.
+
+### Chegada na reunião
+
+**Envelopes e DTs**
+
+- receber envelopes e DTs;
+- conferir a soma de valores e comprovantes;
+- se houver erro, aplicar carimbo de correção.
+
+**Fichas C1**
+
+- conferir o preenchimento;
+- após a conferência, aplicar o carimbo **CONFERIDO**.
+
+### Durante a reunião
+
+**Fichas C1**
+
+- conferir os dados da Ficha C1 no SIGA;
+- após confirmação dos dados no SIGA e/ou geração de novo prontuário, aplicar o carimbo **LANÇADO**.
+
+**Envelopes e DTs**
+
+- realizar baixa na prestação de contas;
+- após a baixa, aplicar o carimbo **BAIXADO**.
+
+**Novos envelopes**
+
+Antes da entrega, conferir prontuário, nome e valor. O documento também deve receber conferência antes do encaminhamento.
+
+### Processo de digitalização
+
+- localizar a Ficha C1 do mês anterior e juntá-la ao envelope e/ou DT quando aplicável;
+- todos os documentos devem ser digitalizados obrigatoriamente em formato de imagem;
+- digitalizar em arquivos separados:
+  - envelope — frente e, quando necessário, verso;
+  - Ficha C1 — frente;
+  - Ficha C1 — verso;
+  - DT — quando houver;
+- após cada documento ser digitalizado, aplicar o carimbo **DIGITALIZADO**.
+
+### Padronização de nomenclatura
+
+A imagem institucional mostra como elementos de nomenclatura:
+
+- prontuário;
+- documento;
+- tipo.
+
+Tipos explicitamente previstos:
+
+- Envelope (frente e, quando necessário, verso);
+- Ficha C1 — Frente;
+- Ficha C1 — Verso;
+- DT.
+
+A regra exata de composição do nome no Renomear continua sendo definida pelas amostras reais e pelas regras atuais do projeto; a tabela institucional serve como referência de obrigatoriedade dos componentes e tipos.
+
+### Mesa de Atendimento — carimbos de decisão
+
+A imagem registra os seguintes carimbos possíveis:
+
+- **VALOR TOTAL APROVADO** — quando o valor foi autorizado pela reunião e entregue ao necessitado sem comprovante, com anotação do valor no carimbo;
+- **SOMENTE MATERIAIS** — quando o atendimento for somente com fralda ou cesta de alimentação;
+- **SOMENTE ROUPAS** — quando o atendimento for somente com roupas.
+
+Também há orientação para o preenchimento do campo de identificação do atendimento na Ficha C1:
+
+- roupas de uso pessoal;
+- roupas de cama;
+- diversos.
+
+### Considerações
+
+A imagem registra que:
+
+- nem todos os casos terão DT;
+- nos atendimentos de emergência, não haverá assinatura no envelope; a assinatura ocorre no recibo de emergência;
+- quando não houver assinatura do necessitado, mas existir comprovante dentro do envelope no mesmo valor ou superior ao atendimento, aplicar o carimbo **COMPROVANTE DENTRO DO ENVELOPE** e digitalizar o comprovante;
+- quando o valor for entregue em dinheiro no dia da reunião, aplicar o carimbo **DINHEIRO $$$**.
+
+Também aparece o carimbo **ASSINATURA DO ATENDIDO NO RECIBO** para os casos de emergência.
+
+### Dupla conferência
+
+Após a anexação de todos os arquivos, outra pessoa deve realizar uma segunda conferência para garantir integridade e rastreabilidade das informações.
+
+### Rotinas fora da reunião
+
+A imagem registra como sequência operacional:
+
+1. receber envelopes atrasados;
+2. baixar na prestação de contas;
+3. conferir soma e comprovantes;
+4. localizar a correspondente Ficha C1 e DT, quando houver;
+5. digitalizar os documentos em formato de imagem e anexar ao atendimento/prontuário correspondente;
+6. atualizar a relação de pendências;
+7. enviar arquivo no grupo, atualizando as pendências do mês.
+
+## Implicações para o Renomear
+
+Esses carimbos podem funcionar como sinais auxiliares de classificação e conformidade, mas não devem ser usados isoladamente como chave de identificação do prontuário.
+
+O sistema deverá, quando possível:
+
+- detectar presença dos carimbos institucionais;
+- registrar quais carimbos foram identificados;
+- comparar carimbos esperados com o tipo e a etapa do documento;
+- sinalizar ausência ou incompatibilidade para REVISAR, não para rejeição automática, salvo regra institucional específica;
+- tratar carimbos como evidência complementar ao OCR dos campos estruturados.
