@@ -45,7 +45,9 @@ export function collectInconsistencies(documents: AnalyzedDocument[]): Inconsist
 
     if (
       document.reviewStatus === 'REVISAR' &&
-      !document.validations.some((item) => item.status === 'REVISAR')
+      !document.validations.some(
+        (item) => item.status === 'REVISAR' || item.status === 'NAO_CONFORME',
+      )
     ) {
       rows.push({
         ...base,
@@ -58,7 +60,9 @@ export function collectInconsistencies(documents: AnalyzedDocument[]): Inconsist
 
     if (
       document.reviewStatus === 'NAO_CONFORME' &&
-      !document.validations.some((item) => item.status === 'NAO_CONFORME')
+      !document.validations.some(
+        (item) => item.status === 'REVISAR' || item.status === 'NAO_CONFORME',
+      )
     ) {
       rows.push({
         ...base,
