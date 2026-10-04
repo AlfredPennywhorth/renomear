@@ -6,7 +6,7 @@ import QualityDashboard from './components/QualityDashboard'
 import SecurityNotice from './components/SecurityNotice'
 import type { AnalyzedDocument } from './domain/document'
 import { listSupportedDocuments } from './services/local-files'
-import { analyzeBatch, summarizeBatch } from './services/batch-processing'
+import { analyzeBatch, isAutomaticRenameReady, summarizeBatch } from './services/batch-processing'
 import { analyzeDocumentsWithLocalOcr } from './services/local-ocr'
 import { applyCrossDocumentValidations } from './services/cross-document-validation'
 import { collectInconsistencies, downloadInconsistencyCsv } from './services/inconsistency-report'
@@ -126,7 +126,7 @@ function App() {
       }
 
       const automaticCandidates = analyzed.filter((document) => {
-        if (document.reviewStatus !== 'OK' || !document.suggestedName) return false
+        if (!isAutomaticRenameReady(document) || !document.suggestedName) return false
         const key = document.suggestedName.toLocaleLowerCase('pt-BR')
         return (nameCounts.get(key) ?? 0) === 1 && document.originalName !== document.suggestedName
       })
@@ -136,7 +136,7 @@ function App() {
       let renameErrors = 0
 
       if (automaticCandidates.length > 0) {
-        const results = await renameApprovedDocuments(directory, automaticCandidates)
+        const results = await renameApprovedDocuments(directory, automaticCandidates, { requireOk: false })
         const byId = new Map(results.map((result) => [result.id, result]))
         renamed = results.filter((result) => result.status === 'RENOMEADO').length
         renameErrors = results.filter((result) => result.status === 'ERRO').length
