@@ -11,7 +11,8 @@ type Props = {
 
 const kindOptions: Array<{ value: DocumentKind; label: string }> = [
   { value: 'ENVELOPE', label: 'Envelope — frente' },
-  { value: 'FICHA_C1', label: 'Ficha C1' },
+  { value: 'FICHA_C1', label: 'Ficha C1 — frente' },
+  { value: 'FICHA_C1_VERSO', label: 'Ficha C1 — verso / pedido de roupas e diversos' },
   { value: 'RECIBO_ATENDIMENTO', label: 'Recibo de atendimento' },
   { value: 'DECLARACAO_TRANSITO', label: 'Declaração de trânsito' },
   { value: 'NAO_PADRONIZADO', label: 'Documento não padronizado' },
@@ -63,7 +64,7 @@ function ReviewPanel({ document, onClose, onChange }: Props) {
 
   const prontuarioValidation = document.prontuario
     ? normalizeProntuario(document.prontuario) !== null
-    : false
+    : document.kind === 'FICHA_C1_VERSO'
 
   const hasBlockingValidation = document.validations.some(
     (item) => item.status === 'REVISAR' || item.status === 'NAO_CONFORME',
@@ -75,6 +76,7 @@ function ReviewPanel({ document, onClose, onChange }: Props) {
     sequenceValidation.ok &&
     dateValidation.ok &&
     (document.kind !== 'FICHA_C1' || document.caseMode !== null) &&
+    (document.kind !== 'FICHA_C1_VERSO' || Boolean(document.prontuario)) &&
     !hasBlockingValidation
 
   return (
