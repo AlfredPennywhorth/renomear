@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import BatchRenameConfirm from './components/BatchRenameConfirm'
 import DocumentPreview from './components/DocumentPreview'
 import ReviewPanel from './components/ReviewPanel'
 import SecurityNotice from './components/SecurityNotice'
@@ -19,6 +20,7 @@ function App() {
   const [busy, setBusy] = useState(false)
   const [renameBusy, setRenameBusy] = useState(false)
   const [securityAccepted, setSecurityAccepted] = useState(false)
+  const [batchCandidates, setBatchCandidates] = useState<AnalyzedDocument[]>([])
 
   const selectedDocument = documents.find((document) => document.id === selectedId) ?? null
   const previewDocument = documents.find((document) => document.id === previewId) ?? null
@@ -102,15 +104,15 @@ function App() {
       return
     }
 
-    const confirmed = window.confirm(
-      'Renomear ' + String(candidates.length) + ' arquivo(s) aprovado(s) nesta pasta? ' +
-      'O sistema verificará conflitos antes de alterar cada arquivo.'
-    )
-    if (!confirmed) return
+    setBatchCandidates(candidates)
+  }
+
+  const confirmRenameApproved = async () => {
+    if (!directory || batchCandidates.length === 0) return
 
     try {
       setRenameBusy(true)
-      const results = await renameApprovedDocuments(directory, candidates)
+      const results = await renameApprovedDocuments(directory, batchCandidates)
       const byId = new Map(results.map((result) => [result.id, result]))
 
       setDocuments((current) => current.map((document) => {
@@ -139,6 +141,7 @@ function App() {
       setMessage(errors
         ? String(renamed) + ' arquivo(s) renomeado(s); ' + String(errors) + ' requer(em) revisão.'
         : String(renamed) + ' arquivo(s) renomeado(s) com sucesso.')
+      setBatchCandidates([])
     } finally {
       setRenameBusy(false)
     }
@@ -259,6 +262,22 @@ function App() {
         <>
           <button className="modal-backdrop" aria-label="Fechar visualização" onClick={() => setPreviewId(null)} />
           <DocumentPreview directory={directory} fileName={previewDocument.originalName} onClose={() => setPreviewId(null)} />
+        </>
+      )}
+
+      {batchCandidates.length > 0 && (
+        <>
+          <button
+            className="modal-backdrop"
+            aria-label="Cancelar renomeação"
+            onClick={() => !renameBusy && setBatchCandidates([])}
+          />
+          <BatchRenameConfirm
+            documents={batchCandidates}
+            busy={renameBusy}
+            onCancel={() => setBatchCandidates([])}
+            onConfirm={confirmRenameApproved}
+          />
         </>
       )}
     </main>
