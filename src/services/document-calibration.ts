@@ -176,11 +176,9 @@ export async function extractCalibratedFields(
     const dateRegion = cropCanvas(canvas, 0.84, 0.095, 0.16, 0.055)
     const sequenceRegion = cropCanvas(canvas, 0.84, 0.125, 0.16, 0.055)
 
-    const [prontuarioResult, dateResult, sequenceResult] = await Promise.all([
-      recognize(worker, prontuarioRegion, PSM.SINGLE_LINE, '0123456789'),
-      recognize(worker, dateRegion, PSM.SINGLE_LINE, '0123456789/.-'),
-      recognize(worker, sequenceRegion, PSM.SINGLE_LINE, '0123456789'),
-    ])
+    const prontuarioResult = await recognize(worker, prontuarioRegion, PSM.SINGLE_LINE, '0123456789')
+    const dateResult = await recognize(worker, dateRegion, PSM.SINGLE_LINE, '0123456789/.-')
+    const sequenceResult = await recognize(worker, sequenceRegion, PSM.SINGLE_LINE, '0123456789')
 
     const rawProntuario = digitsOnly(prontuarioResult.data.text)
     const rawSequence = digitsOnly(sequenceResult.data.text)
@@ -201,11 +199,9 @@ export async function extractCalibratedFields(
     const dateRegion = cropCanvas(canvas, 0.72, 0.165, 0.22, 0.055)
     const prontuarioRegion = cropCanvas(canvas, 0.16, 0.255, 0.23, 0.06)
 
-    const [numeroResult, dateResult, prontuarioResult] = await Promise.all([
-      recognize(worker, numeroRegion, PSM.SINGLE_LINE, '0123456789'),
-      recognize(worker, dateRegion, PSM.SINGLE_LINE, '0123456789/.-'),
-      recognize(worker, prontuarioRegion, PSM.SINGLE_LINE, '0123456789'),
-    ])
+    const numeroResult = await recognize(worker, numeroRegion, PSM.SINGLE_LINE, '0123456789')
+    const dateResult = await recognize(worker, dateRegion, PSM.SINGLE_LINE, '0123456789/.-')
+    const prontuarioResult = await recognize(worker, prontuarioRegion, PSM.SINGLE_LINE, '0123456789')
 
     const rawNumero = digitsOnly(numeroResult.data.text)
     const rawProntuario = digitsOnly(prontuarioResult.data.text)
