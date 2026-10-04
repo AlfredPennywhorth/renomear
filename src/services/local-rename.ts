@@ -33,12 +33,19 @@ function isNotFound(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'NotFoundError'
 }
 
-async function fileExists(directory: DirectoryHandleLike, name: string): Promise<boolean> {
+async function fileExists(
+  directory: DirectoryHandleLike,
+  name: string,
+  excludeExactName?: string,
+): Promise<boolean> {
   const expected = name.toLocaleLowerCase('pt-BR')
   for await (const rawEntry of directory.values()) {
     const entry = rawEntry as { name?: string }
-    if (entry.name?.toLocaleLowerCase('pt-BR') === expected) return true
+    if (!entry.name || entry.name === excludeExactName) continue
+    if (entry.name.toLocaleLowerCase('pt-BR') === expected) return true
   }
+
+  if (excludeExactName) return false
 
   try {
     await directory.getFileHandle(name)
@@ -133,11 +140,14 @@ async function renameOne(
   if ((requireOk && document.reviewStatus !== 'OK') || !target) {
     return { id: document.id, from: document.originalName, to: target ?? '', status: 'IGNORADO' }
   }
-  if (document.originalName.localeCompare(target, undefined, { sensitivity: 'accent' }) === 0) {
+  if (document.originalName === target) {
     return { id: document.id, from: document.originalName, to: target, status: 'IGNORADO' }
   }
 
-  if (await fileExists(directory, target)) {
+  const caseOnlyChange =
+    document.originalName.toLocaleLowerCase('pt-BR') === target.toLocaleLowerCase('pt-BR')
+
+  if (await fileExists(directory, target, caseOnlyChange ? document.originalName : undefined)) {
     return {
       id: document.id,
       from: document.originalName,
@@ -156,6 +166,52 @@ async function renameOne(
       to: target,
       status: 'ERRO',
       error: 'O arquivo original está vazio. Ele foi preservado e deve ser revisado.',
+    }
+  }
+
+  if (caseOnlyChange) {
+    if (typeof sourceHandle.move !== 'function') {
+      return {
+        id: document.id,
+        from: document.originalName,
+        to: target,
+        status: 'ERRO',
+        error: 'Este navegador não oferece renomeação segura para ajustar maiúsculas/minúsculas.',
+      }
+    }
+
+    const temporaryCaseName = '.renomear-case-' + crypto.randomUUID() + '.tmp'
+    let movedToTemporary = false
+
+    try {
+      await sourceHandle.move(temporaryCaseName)
+      movedToTemporary = true
+      await sourceHandle.move(target)
+
+      const writtenHandle = await directory.getFileHandle(target)
+      const writtenFile = await writtenHandle.getFile()
+      if (!(await verifySameContent(sourceFile, writtenFile))) {
+        throw new Error('O arquivo renomeado não passou pela verificação de integridade.')
+      }
+
+      return { id: document.id, from: document.originalName, to: target, status: 'RENOMEADO' }
+    } catch (error) {
+      if (movedToTemporary) {
+        try {
+          await sourceHandle.move(document.originalName)
+        } catch {
+          // Se o rollback falhar, o conteúdo continua preservado no nome temporário.
+        }
+      }
+      return {
+        id: document.id,
+        from: document.originalName,
+        to: target,
+        status: 'ERRO',
+        error: error instanceof Error
+          ? error.message
+          : 'Falha ao ajustar maiúsculas/minúsculas do nome. O conteúdo foi preservado.',
+      }
     }
   }
 
