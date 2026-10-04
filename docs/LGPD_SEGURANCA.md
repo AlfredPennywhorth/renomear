@@ -17,7 +17,7 @@ Este documento descreve medidas técnicas e operacionais do projeto. Ele não su
 7. **Revisão humana.** Resultado incerto não pode virar OK automaticamente; deve ser REVISAR.
 8. **Sem sobrescrita silenciosa.** A renomeação deve checar colisões e preservar o original em caso de erro.
 9. **Confirmação antes de alteração em lote.** Arquivos só podem ser renomeados após aprovação explícita.
-10. **Sem uso de serviços externos de IA/OCR no MVP.** Qualquer futura integração externa exige reavaliação de privacidade e segurança.
+10. **Sem uso de serviços externos de IA/OCR no MVP.** O OCR atual usa Tesseract.js/PDF.js e modelos empacotados no próprio site. O navegador pode baixar esses assets estáticos da mesma origem, mas imagens, PDFs, recortes e texto extraído não são enviados ao servidor. Qualquer futura integração externa exige reavaliação de privacidade e segurança.
 
 ## Aviso ao usuário
 
