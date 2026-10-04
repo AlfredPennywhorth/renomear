@@ -350,3 +350,23 @@ th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #
   .batch-confirm footer { flex-direction: column-reverse; }
   .batch-confirm footer button { width: 100%; }
 }
+
+
+.document-rules {
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid #d8e0e4;
+  border-radius: 12px;
+  background: #fbfcfc;
+}
+.document-rules h3 { margin: 0 0 10px; font-size: 14px; }
+.document-rules small { display: block; margin-top: 8px; color: #6c7881; line-height: 1.4; }
+.choice-row { display: flex; gap: 18px; flex-wrap: wrap; }
+.choice-row label,
+.monthly-check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 650;
+  color: #35434d;
+}
