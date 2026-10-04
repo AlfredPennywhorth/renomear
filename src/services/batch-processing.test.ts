@@ -85,6 +85,23 @@ describe('analyzeBatch', () => {
     expect(isAutomaticRenameReady(result)).toBe(true)
   })
 
+  it('não libera DT quando a sequência veio sem confiança própria', () => {
+    const result = doc({
+      kind: 'DECLARACAO_TRANSITO',
+      prontuario: '001990',
+      prontuarioConfidence: 0.96,
+      prontuarioOcrSource: 'PADDLE',
+      numeroDocumento: '013068',
+      numeroDocumentoConfidence: null,
+      documentDate: '02/09/2026',
+      confidence: 0.99,
+      suggestedName: '001990_013068_dt.jpg',
+      reviewStatus: 'REVISAR',
+    })
+
+    expect(isAutomaticRenameReady(result)).toBe(false)
+  })
+
   it('não libera renomeação automática de documento não conforme', () => {
     const [result] = analyzeBatch([
       doc({
