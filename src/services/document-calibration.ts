@@ -81,8 +81,7 @@ export async function detectDocumentOrientation(
   worker: Worker,
   source: HTMLCanvasElement,
 ): Promise<{ canvas: HTMLCanvasElement; rotation: 0 | 90 | 180 | 270; score: number }> {
-  const candidates: Array<0 | 90 | 180 | 270> =
-    source.width >= source.height ? [0, 180] : [0, 90, 180, 270]
+  const candidates: Array<0 | 90 | 180 | 270> = [0, 90, 180, 270]
 
   let best = { canvas: source, rotation: 0 as 0 | 90 | 180 | 270, score: -1 }
 
