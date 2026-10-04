@@ -16,7 +16,10 @@
     "vite": "8.3.2",
     "typescript": "7.0.2",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "tesseract.js": "7.0.0",
+    "pdfjs-dist": "6.3.289",
+    "@tesseract.js-data/por": "1.0.0"
   },
   "devDependencies": {
     "@types/react": "19.3.0",
