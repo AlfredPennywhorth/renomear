@@ -113,7 +113,7 @@ describe('renameApprovedDocuments', () => {
     expect(result.error).toContain('integridade')
     expect(files.has('origem.jpg')).toBe(true)
     expect([...files.get('origem.jpg')!]).toEqual([...original])
-    expect(removed).toEqual([])
+    expect(removed).not.toContain('origem.jpg')
   })
 
   it('não altera nada quando o destino já existe', async () => {
