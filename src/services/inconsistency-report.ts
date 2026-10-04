@@ -88,7 +88,8 @@ export function collectInconsistencies(documents: AnalyzedDocument[]): Inconsist
 }
 
 function csvCell(value: string): string {
-  return '"' + value.replaceAll('"', '""') + '"'
+  const safeValue = /^[=+\-@]/.test(value) ? "'" + value : value
+  return '"' + safeValue.replaceAll('"', '""') + '"'
 }
 
 export function buildInconsistencyCsv(rows: InconsistencyRow[]): string {
