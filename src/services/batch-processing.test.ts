@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AnalyzedDocument } from '../domain/document'
-import { analyzeBatch, summarizeBatch } from './batch-processing'
+import { analyzeBatch, isAutomaticRenameReady, summarizeBatch } from './batch-processing'
 
 function doc(overrides: Partial<AnalyzedDocument> = {}): AnalyzedDocument {
   return {
@@ -66,6 +66,41 @@ describe('analyzeBatch', () => {
       }),
     ])
     expect(result.reviewStatus).toBe('NAO_CONFORME')
+  })
+
+  it('permite renomear documento identificado mesmo quando a auditoria ainda exige revisão', () => {
+    const [result] = analyzeBatch([
+      doc({
+        kind: 'FICHA_C1',
+        prontuario: '2103',
+        documentDate: '23/09/2026',
+        caseMode: 'REUNIAO',
+        confidence: 0.91,
+      }),
+    ])
+
+    expect(result.reviewStatus).toBe('REVISAR')
+    expect(isAutomaticRenameReady(result)).toBe(true)
+  })
+
+  it('não libera renomeação automática com baixa confiança OCR', () => {
+    const [result] = analyzeBatch([
+      doc({
+        kind: 'FICHA_C1',
+        prontuario: '2103',
+        documentDate: '23/09/2026',
+        caseMode: 'REUNIAO',
+        confidence: 0.55,
+        validations: [{
+          id: 'ocr-confidence',
+          label: 'Confiança',
+          value: '55%',
+          status: 'REVISAR',
+        }],
+      }),
+    ])
+
+    expect(isAutomaticRenameReady(result)).toBe(false)
   })
 
   it('resume automáticos, revisões e não conformes', () => {
