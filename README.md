@@ -51,6 +51,15 @@ A renomeação direta de arquivos na pasta escolhida, sem instalação local, de
 
 Detalhamento: `docs/LGPD_SEGURANCA.md`.
 
+## Homologação
+
+- A branch `develop` alimenta o ambiente de homologação via GitHub Pages.
+- O ambiente de teste deve ser usado com cópias dos documentos nas primeiras rodadas.
+- O dashboard e o relatório de inconsistências são calculados localmente no navegador.
+- Manual: `docs/COMO_USAR.md`.
+- Dashboard: `docs/DASHBOARD_QUALIDADE.md`.
+- Roteiro de homologação: `docs/ROTEIRO_HOMOLOGACAO.md`.
+
 ## Governança
 
 - `main`: versão estável.
