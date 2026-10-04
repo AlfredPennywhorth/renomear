@@ -187,6 +187,27 @@ describe('analyzeBatch', () => {
     expect(isRenameReady(result)).toBe(false)
   })
 
+  it('não permite que aprovação manual sobreponha não conformidade', () => {
+    const result = reconcileReviewStatus(doc({
+      kind: 'DECLARACAO_TRANSITO',
+      prontuario: '001072',
+      numeroDocumento: '003604',
+      suggestedName: '001072_003604_DT.jpg',
+      manualReviewApproved: true,
+      reviewStatus: 'OK',
+      validations: [{
+        id: 'cross-date-meeting',
+        label: 'Data da reunião',
+        value: '01/01/2026 x 02/01/2026',
+        status: 'NAO_CONFORME',
+      }],
+    }))
+
+    expect(result.reviewStatus).toBe('NAO_CONFORME')
+    expect(result.manualReviewApproved).toBe(false)
+    expect(isRenameReady(result)).toBe(false)
+  })
+
   it('rebaixa OK quando nova validação cruzada vira não conforme', () => {
     const result = reconcileReviewStatus(doc({
       reviewStatus: 'OK',
