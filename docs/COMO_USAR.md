@@ -18,19 +18,16 @@ Operadores responsáveis por conferir, organizar e preparar a documentação dig
 1. Abra o Renomear.
 2. Leia e confirme os cuidados de segurança.
 3. Selecione a pasta que contém as cópias dos documentos.
-4. Revise a fila de arquivos.
-5. Para cada documento:
-   - confirme o tipo;
-   - confirme o prontuário;
-   - confirme sequência/número;
-   - confirme as datas;
-   - informe reunião/emergência quando for C1;
-   - marque mensal quando aplicável;
-   - trate os alertas apresentados.
-6. Consulte o Dashboard para acompanhar cobertura e qualidade.
-7. Exporte o relatório de inconsistências quando houver pendências.
-8. Renomeie somente documentos classificados como OK.
-9. Faça a conferência final dos arquivos renomeados.
+4. Acione **Processar lote**.
+5. Aguarde o OCR local analisar os arquivos. O progresso é mostrado na própria tela.
+6. Os documentos seguros para a cobertura automática atual seguem pelo fluxo de renomeação; dúvidas ficam em **REVISAR**.
+7. Para uma pendência, clique em **Revisar**:
+   - documento à esquerda;
+   - campos, nome proposto e verificações à direita;
+   - confirme tipo, prontuário, sequência/número, datas e demais regras aplicáveis.
+8. Consulte o Dashboard para acompanhar cobertura e qualidade.
+9. Exporte o relatório de inconsistências quando houver pendências.
+10. Faça a conferência final dos arquivos renomeados.
 
 ## Significado dos estados
 
@@ -66,4 +63,4 @@ Sugestão:
 
 ## Observação sobre a fase atual
 
-Na homologação atual, a lógica de negócio, revisão manual, dashboard, relatório e renomeação estão sendo validados antes da automação completa de OCR, manuscritos, carimbos, cores e orientação. Campos duvidosos devem permanecer em REVISAR.
+Na homologação atual, o OCR local já está conectado ao processamento em lote para imagens e para a primeira página de PDFs. A classificação e extração ainda são conservadoras: manuscritos, marcações, carimbos, cores, orientação e algumas regras de vínculo continuam exigindo calibração. Campos duvidosos permanecem em REVISAR.
