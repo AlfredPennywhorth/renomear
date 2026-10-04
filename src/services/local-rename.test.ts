@@ -37,7 +37,9 @@ function fakeDirectory(initial: Record<string, Uint8Array>, corruptWrites = fals
 
   const directory: DirectoryHandleLike = {
     name: 'teste',
-    values: async function* () {},
+    values: async function* () {
+      for (const name of files.keys()) yield { kind: 'file', name }
+    },
     queryPermission: async () => 'granted',
     requestPermission: async () => 'granted',
     getFileHandle: async (name, options) => {
@@ -108,6 +110,34 @@ describe('renameApprovedDocuments', () => {
     expect(result.error).toContain('Já existe')
     expect([...files.get('origem.jpg')!]).toEqual([...original])
     expect([...files.get('001234_c1_frente.jpg')!]).toEqual([...existing])
+    expect(removed).toEqual([])
+  })
+
+  it('detecta colisão sem diferenciar maiúsculas de minúsculas', async () => {
+    const original = new Uint8Array([1, 2, 3, 4])
+    const existing = new Uint8Array([7, 7])
+    const { directory, files, removed } = fakeDirectory({
+      'origem.jpg': original,
+      '001234_C1_FRENTE.JPG': existing,
+    })
+
+    const [result] = await renameApprovedDocuments(directory, [makeDocument()])
+
+    expect(result.status).toBe('ERRO')
+    expect(files.has('origem.jpg')).toBe(true)
+    expect([...files.get('001234_C1_FRENTE.JPG')!]).toEqual([...existing])
+    expect(removed).toEqual([])
+  })
+
+  it('preserva arquivo original vazio para revisão', async () => {
+    const { directory, files, removed } = fakeDirectory({ 'origem.jpg': new Uint8Array() })
+
+    const [result] = await renameApprovedDocuments(directory, [makeDocument()])
+
+    expect(result.status).toBe('ERRO')
+    expect(result.error).toContain('vazio')
+    expect(files.has('origem.jpg')).toBe(true)
+    expect(files.has('001234_c1_frente.jpg')).toBe(false)
     expect(removed).toEqual([])
   })
 
