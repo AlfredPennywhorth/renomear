@@ -353,3 +353,14 @@ O sistema deverá, quando possível:
 - comparar carimbos esperados com o tipo e a etapa do documento;
 - sinalizar ausência ou incompatibilidade para REVISAR, não para rejeição automática, salvo regra institucional específica;
 - tratar carimbos como evidência complementar ao OCR dos campos estruturados.
+
+
+### Regra complementar — VALOR TOTAL APROVADO
+
+Nos envelopes/recibos não mensais, o carimbo **VALOR TOTAL APROVADO** permite que o campo de compra de mercadorias/comprovantes permaneça sem valor, desde que haja lançamento no campo "foi deixado com a família..." quando aplicável.
+
+Sem esse carimbo, se houver valor apenas no campo "foi deixado com a família..." e o campo de compra/mercadorias/comprovantes estiver vazio ou inutilizado, o Renomear deve sinalizar **REVISAR — possível furo de procedimento**.
+
+A regra não se aplica aos atendimentos identificados como **Mensal**.
+
+Detalhamento em `docs/REGRA_VALOR_TOTAL_APROVADO.md`.
