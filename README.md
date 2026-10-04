@@ -19,12 +19,14 @@ Reduzir o trabalho manual de organização de documentos digitalizados, mantendo
 
 1. Usuário escolhe a pasta com os documentos.
 2. O sistema conta e lista os arquivos suportados.
-3. Cada arquivo é analisado localmente.
-4. O sistema identifica o tipo documental.
-5. Campos relevantes são extraídos.
-6. Um novo nome é sugerido.
-7. O usuário revisa/corrige.
-8. O sistema renomeia os arquivos confirmados.
+3. Na homologação atual, o operador identifica/revisa manualmente tipo e campos relevantes.
+4. O sistema aplica as validações e cruzamentos já implementados.
+5. Um novo nome é sugerido.
+6. O usuário confirma ou corrige os dados.
+7. O sistema registra inconsistências e atualiza o dashboard.
+8. Somente documentos aprovados podem ser renomeados.
+
+A classificação e extração automáticas por OCR permanecem como etapa posterior do MVP automático. O processamento continuará estritamente local.
 
 ## Tipos documentais iniciais
 
@@ -37,7 +39,7 @@ A lista será calibrada com amostras reais.
 
 ## Compatibilidade
 
-A renomeação direta de arquivos na pasta escolhida, sem instalação local, depende das APIs de acesso ao sistema de arquivos disponíveis no navegador. O MVP priorizará navegadores Chromium compatíveis com a File System Access API e terá estratégia de fallback para ambientes sem suporte.
+A renomeação direta de arquivos na pasta escolhida, sem instalação local, depende das APIs de acesso ao sistema de arquivos disponíveis no navegador. A homologação atual é suportada em **Chrome e Edge em computador**, usando a File System Access API. Navegadores sem acesso direto a pastas ficam bloqueados nesta fase; o fallback seguro será definido antes de ampliar a compatibilidade.
 
 ## LGPD e segurança
 
@@ -55,6 +57,7 @@ Detalhamento: `docs/LGPD_SEGURANCA.md`.
 
 - A branch `develop` alimenta o ambiente de homologação via GitHub Pages.
 - O ambiente de teste deve ser usado com cópias dos documentos nas primeiras rodadas.
+- A homologação atual valida o fluxo assistido e o motor de regras; OCR/classificação automática ainda não estão integrados.
 - O dashboard e o relatório de inconsistências são calculados localmente no navegador.
 - Manual: `docs/COMO_USAR.md`.
 - Dashboard: `docs/DASHBOARD_QUALIDADE.md`.
