@@ -149,6 +149,15 @@ function App() {
             return {
               ...document,
               originalName: result.to,
+              rotationDegrees: 0 as const,
+              validations: document.validations.map((item) =>
+                item.id === 'ocr-orientation'
+                  ? {
+                      ...item,
+                      note: 'A orientação detectada foi aplicada fisicamente durante a renomeação.',
+                    }
+                  : item,
+              ),
               renameState: 'RENOMEADO' as const,
               lastRenameError: null,
             }
@@ -220,6 +229,15 @@ function App() {
           return {
             ...document,
             originalName: result.to,
+            rotationDegrees: 0 as const,
+            validations: document.validations.map((item) =>
+              item.id === 'ocr-orientation'
+                ? {
+                    ...item,
+                    note: 'A orientação detectada foi aplicada fisicamente durante a renomeação.',
+                  }
+                : item,
+            ),
             renameState: 'RENOMEADO' as const,
             lastRenameError: null,
           }
