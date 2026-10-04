@@ -300,7 +300,7 @@ export async function analyzeDocumentsWithLocalOcr(
           (current.prontuarioOcrSource === 'MANUAL' ? current.prontuario : null)
         const tesseractConfidence = calibrated.prontuario
           ? score01(calibratedConfidence.prontuario, true)
-          : score01(confidence, true) * 0.9
+          : 0
 
         const identity = decideProntuario(
           current,
