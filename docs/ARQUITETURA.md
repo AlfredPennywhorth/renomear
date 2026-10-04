@@ -89,7 +89,9 @@ A relação entre Ficha C1 e envelope/recibo é determinada pelo prontuário, n�
 
 - O sistema não deve inferir vínculo apenas pela proximidade dos arquivos na pasta.
 - O prontuário é a chave principal de correlação.
-- Se houver mais de uma Ficha C1 do mesmo prontuário no lote, o sistema deve sinalizar REVISAR em vez de escolher automaticamente.
+- Mais de uma Ficha C1 do mesmo prontuário pode ser legítima: EMERGÊNCIA e REUNIÃO em momentos distintos, ou múltiplas partes da mesma situação.
+- Quando houver múltiplas C1 da mesma situação, exigir paginação explícita (ex.: 1/2 e 2/2) e validar completude/ordem.
+- Se houver mais de uma Ficha C1 da mesma situação sem paginação identificável, sinalizar REVISAR em vez de associar automaticamente.
 - Se a marcação REUNIÃO/EMERGÊNCIA não puder ser lida com segurança, o sistema deve sinalizar REVISAR.
 
 ## Regra de confiança
