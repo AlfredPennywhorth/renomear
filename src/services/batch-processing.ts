@@ -113,6 +113,7 @@ export function summarizeBatch(documents: AnalyzedDocument[]): BatchAnalysisSumm
 export function isAutomaticRenameReady(document: AnalyzedDocument): boolean {
   if (document.reviewStatus === 'NAO_CONFORME') return false
   if (!document.suggestedName || !document.kind || !document.prontuario) return false
+  if (!AUTO_RULE_COVERAGE.has(document.kind)) return false
   if (!normalizeProntuario(document.prontuario)) return false
   if ((document.confidence ?? 0) < 0.72) return false
 
