@@ -1,3 +1,4 @@
+import { hasOperationalReviewBlock } from '../services/batch-processing'
 import { useEffect, useState } from 'react'
 import type { AnalyzedDocument, DocumentKind, ReviewStatus } from '../domain/document'
 import { normalizeProntuario } from '../domain/prontuario'
@@ -103,7 +104,9 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
   }
 
   const setStatus = (status: ReviewStatus) => {
-    if (status === 'OK' && document.reviewStatus === 'NAO_CONFORME') return
+    if (status === 'OK' && (document.reviewStatus === 'NAO_CONFORME' ||
+      document.validations.some((item) => item.status === 'NAO_CONFORME') ||
+      hasOperationalReviewBlock(document))) return
 
     if (status === 'OK') {
       update({
@@ -157,11 +160,11 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
     ? normalizeProntuario(document.prontuario) !== null
     : document.kind === 'FICHA_C1_VERSO'
 
-  // REVISAR alerts, including missing or ambiguous cross-document matches,
-  // may be resolved by human inspection. Only a confirmed NÃO CONFORME blocks approval.
+  // Human inspection can resolve audit alerts, but cannot repair empty files
+  // or physically rotate PDFs.
   const hasBlockingValidation = document.validations.some(
     (item) => item.status === 'NAO_CONFORME',
-  )
+  ) || hasOperationalReviewBlock(document)
 
   const dateAllowsManualApproval = !document.documentDate || dateValidation.ok
 
@@ -299,7 +302,7 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
         <div className="section-heading">
           <div>
             <h3>Verificações</h3>
-            <p>Alertas marcados como REVISAR podem ser resolvidos pela conferência humana. Itens NÃO CONFORME continuam bloqueando a aprovação.</p>
+            <p>Alertas de auditoria marcados como REVISAR podem ser resolvidos pela conferência humana. Arquivos vazios, PDFs com rotação pendente e itens NÃO CONFORME bloqueiam a aprovação.</p>
           </div>
         </div>
 
