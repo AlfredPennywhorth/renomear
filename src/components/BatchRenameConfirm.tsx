@@ -33,7 +33,7 @@ function BatchRenameConfirm({ documents, busy, onCancel, onConfirm }: Props) {
         <div>
           <p className="eyebrow">Confirmação final</p>
           <h2 id="batch-title">Renomear {documents.length} arquivo(s)?</h2>
-          <p>Confira os nomes antes de alterar a pasta. Apenas documentos aprovados como OK aparecem aqui.</p>
+          <p>Confira os nomes antes de alterar a pasta. A confirmação renomeia os arquivos listados; ela não aprova a auditoria documental.</p>
         </div>
       </header>
 
