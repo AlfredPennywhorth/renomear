@@ -34,7 +34,7 @@ Processar o lote não altera os nomes. Auditoria pendente não equivale, por si 
 - A orientação já testa 0°, 90°, 180° e 270° pela faixa superior; a ampliação da busca é planejada.
 - Edições que mudam o nome proposto já invalidam o estado anterior de renomeação; arquivos com nome atual igual ao proposto já são excluídos dos candidatos.
 - Apenas DT possui cobertura automática de auditoria liberada; os demais tipos recebem alerta de cobertura, o que é distinto da elegibilidade de renomeação por identidade segura.
-- Girar JPG/WebP fisicamente reencoda a imagem; a preparação em memória para OCR não altera o original.
+- Girar JPG, PNG ou WebP fisicamente decodifica e regrava a imagem, podendo descartar metadados. PNG mantém codificação sem perdas, mas não preserva necessariamente a representação binária original; JPG/WebP podem sofrer perda visual. A preparação em memória para OCR não altera o original.
 - Somente a primeira página do PDF é lida, alinhada ao uso predominante de documentos de uma página.
 - Dashboard e relatório de inconsistências são calculados localmente.
 
@@ -58,6 +58,9 @@ Ficha C1 frente/verso, envelope, recibo de atendimento, recibo manual de emergê
 | C1 verso | `PPPPPP_c1_verso.jpg` |
 | Envelope frente | `PPPPPP_DDDDDD_env_frente.jpg` |
 | DT | `PPPPPP_DDDDDD_DT.jpg` |
+| Recibo de atendimento — atual | `PPPPPP_DDDDDD_recibo.jpg` (sem número: `PPPPPP_recibo.jpg`) |
+| Recibo manual de emergência — atual | `PPPPPP_DDDDDD_rec_emergencia.jpg` (sem número: `PPPPPP_rec_emergencia.jpg`) |
+| Diversos/não padronizado — atual | `PPPPPP_DDDDDD_documento.jpg` (sem número: `PPPPPP_documento.jpg`) |
 | Envelope mensal — planejado | `PPPPPP_DDDDDD_env_mensal_frente.jpg` |
 | Recibo de atendimento mensal — planejado | `PPPPPP_DDDDDD_recibo_mensal.jpg` |
 | Recibo manual de emergência mensal com número — planejado | `PPPPPP_DDDDDD_rec_emergencia_mensal.jpg` |
@@ -79,6 +82,22 @@ Esta seção descreve mudanças e ampliações planejadas. As salvaguardas já d
 | **Auditar atendimento** | Documentos correspondentes, datas/modalidade, assinaturas/carimbos, preenchimento e regras institucionais |
 
 No modo Renomear, a ausência de C1 ou envelope no lote não será cobrada. Identidade insegura, arquivos vazios e conflitos de nomes continuarão bloqueando a operação. Renomear não aprovará a auditoria.
+
+### Vínculo por prontuário e localização dos campos
+
+O prontuário normalizado para seis dígitos é a chave institucional de vínculo entre C1, DT e envelope/recibo. Um prontuário manuscrito de quatro dígitos recebe dois zeros à esquerda; de outros comprimentos válidos, recebe quantos zeros forem necessários até seis. O campo deve ser localizado pelo rótulo “Prontuário”, usando a posição como apoio após corrigir orientação e localizar o formulário:
+
+| Documento | Região esperada do prontuário |
+| --- | --- |
+| C1 frente | Canto superior direito; pode ser manuscrito |
+| DT | Região superior esquerda, aproximadamente no primeiro terço da altura |
+| Envelope/recibo | Canto superior direito |
+
+As posições são referências do formulário, não coordenadas rígidas da folha A4. O número da DT e a sequência do envelope são identificadores documentais distintos do prontuário.
+
+Prontuários iguais agrupam documentos para auditoria, mas não demonstram por si sós que pertencem a uma única ocorrência: podem existir atendimentos diferentes para o mesmo prontuário. Data, modalidade e número documental auxiliam a seleção da ocorrência, sem alterar a identidade. Ambiguidade permanece em revisão.
+
+Prontuários diferentes não devem ser forçados para o mesmo grupo. Para detectar conflito entre documentos com prontuários diferentes que deveriam estar vinculados, exigir associação explícita confirmada pelo revisor, registrando quais documentos foram associados. Não inferir vínculo apenas pela pasta ou proximidade de arquivos e não copiar o prontuário de outro documento para preencher uma leitura insegura.
 
 **Invariável de identidade:** ausência de documento correspondente em conjunto parcial é pendência de auditoria. Já um conflito de identidade efetivamente observado entre documentos comprovadamente vinculados ao mesmo atendimento bloqueia a renomeação automática dos itens afetados até conferência humana. Compartilhar pasta, data ou grupo documental não prova esse vínculo e não basta para inferir conflito.
 
