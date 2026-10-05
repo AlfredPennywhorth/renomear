@@ -49,6 +49,20 @@ describe('decideProntuario', () => {
     ).value).toBeNull()
   })
 
+  it('prioriza divergência do Paddle sobre consenso global e recorte', () => {
+    const result = decideProntuario(
+      doc(),
+      '000136',
+      0.91,
+      '000186',
+      0.94,
+      '000136',
+    )
+
+    expect(result.value).toBeNull()
+    expect(result.conflict).toBe(true)
+  })
+
   it('continua recusando leitores divergentes', () => {
     const result = decideProntuario(
       doc(),
