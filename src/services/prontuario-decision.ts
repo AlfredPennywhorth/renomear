@@ -32,6 +32,22 @@ export function decideProntuario(
   }
 
   if (
+    paddleValue &&
+    (
+      (tesseractValue && tesseractValue !== paddleValue) ||
+      (corroboratedValue && corroboratedValue !== paddleValue)
+    )
+  ) {
+    return {
+      value: null,
+      confidence: Math.max(tesseractConfidence, paddleConfidence),
+      source: null,
+      conflict: true,
+      lowConfidence: false,
+    }
+  }
+
+  if (
     corroboratedValue &&
     tesseractValue &&
     corroboratedValue === tesseractValue
@@ -46,16 +62,6 @@ export function decideProntuario(
   }
 
   if (tesseractValue && paddleValue) {
-    if (tesseractValue !== paddleValue) {
-      return {
-        value: null,
-        confidence: Math.max(tesseractConfidence, paddleConfidence),
-        source: null,
-        conflict: true,
-        lowConfidence: false,
-      }
-    }
-
     if (tesseractConfidence >= 0.55 && paddleConfidence >= 0.55) {
       return {
         value: tesseractValue,
