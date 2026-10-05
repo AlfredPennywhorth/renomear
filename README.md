@@ -31,6 +31,10 @@ Processar o lote não altera os nomes. Auditoria pendente não equivale, por si 
 - Correção manual de identidade prevalece na sessão.
 - Imagens podem receber a rotação física ao confirmar a renomeação; após sucesso, a rotação pendente é zerada.
 - PDFs são corrigidos em memória para leitura, mas ainda não são gravados com rotação física.
+- A orientação já testa 0°, 90°, 180° e 270° pela faixa superior; a ampliação da busca é planejada.
+- Edições que mudam o nome proposto já invalidam o estado anterior de renomeação; arquivos com nome atual igual ao proposto já são excluídos dos candidatos.
+- Apenas DT possui cobertura automática de auditoria liberada; os demais tipos recebem alerta de cobertura, o que é distinto da elegibilidade de renomeação por identidade segura.
+- Girar JPG/WebP fisicamente reencoda a imagem; a preparação em memória para OCR não altera o original.
 - Somente a primeira página do PDF é lida, alinhada ao uso predominante de documentos de uma página.
 - Dashboard e relatório de inconsistências são calculados localmente.
 
@@ -42,7 +46,11 @@ Ficha C1 frente/verso, envelope, recibo de atendimento, recibo manual de emergê
 
 ## Nomenclatura
 
-`PPPPPP` representa o prontuário; `DDDDDD`, o número do documento.
+`PPPPPP` representa o prontuário; `DDDDDD`, o número do documento no padrão institucional de seis dígitos.
+
+**Regra institucional confirmada:** números gerados pelo sistema de origem têm seis dígitos. Somente números de formulários preenchidos à mão podem ter menos dígitos; nesses casos completar com zeros à esquerda até seis (por exemplo, `1234` → `001234`). Não acrescentar sempre dois zeros, não truncar números maiores e não completar automaticamente uma leitura parcial de número impresso.
+
+**Lacuna atual a corrigir na Entrega 2:** o código ainda preserva a sequência informada, e a extração de envelopes/recibos admite 4–8 dígitos. Essa aceitação técnica não altera a regra institucional. A implementação deverá exigir seis dígitos nos impressos, normalizar os manuais e encaminhar valores incompatíveis para revisão.
 
 | Tipo | Padrão |
 | --- | --- |
@@ -51,14 +59,17 @@ Ficha C1 frente/verso, envelope, recibo de atendimento, recibo manual de emergê
 | Envelope frente | `PPPPPP_DDDDDD_env_frente.jpg` |
 | DT | `PPPPPP_DDDDDD_DT.jpg` |
 | Envelope mensal — planejado | `PPPPPP_DDDDDD_env_mensal_frente.jpg` |
+| Recibo de atendimento mensal — planejado | `PPPPPP_DDDDDD_recibo_mensal.jpg` |
+| Recibo manual de emergência mensal com número — planejado | `PPPPPP_DDDDDD_rec_emergencia_mensal.jpg` |
+| Recibo manual de emergência mensal sem número — planejado | `PPPPPP_rec_emergencia_mensal.jpg` |
 
-A extensão corresponde ao formato do arquivo; os exemplos acima usam JPG. O número da DT é o número impresso da declaração e `DT` permanece em maiúsculas. A indicação mensal será estendida aos recibos aplicáveis.
+A extensão corresponde ao formato do arquivo; os exemplos acima usam JPG. O número da DT é o número impresso da declaração e `DT` permanece em maiúsculas. A marca mensal será aplicável a `ENVELOPE`, `RECIBO_ATENDIMENTO` e `RECIBO_EMERGENCIA_MANUAL` quando o próprio documento a indicar ou houver confirmação humana. C1, DT e diversos não recebem esse sufixo. No recibo manual, a ausência de número não autoriza inventá-lo; manter o padrão sem número. A marca mensal não muda o tipo nem substitui a conferência da modalidade.
 
 Mensal só deve ser reconhecido quando explícito no documento ou confirmado manualmente. A pasta ou a necessidade de desbloquear aprovação não constitui evidência de mensalidade.
 
 ## Evolução planejada — 05/10/2026
 
-As funcionalidades desta seção ainda não devem ser consideradas disponíveis. A implementação será dividida em entregas pequenas, com validação em documentos reais.
+Esta seção descreve mudanças e ampliações planejadas. As salvaguardas já disponíveis são explicitadas na seção de estado atual; não se considera que todos os itens abaixo sejam inéditos. A implementação será dividida em entregas pequenas, com validação em documentos reais.
 
 ### Dois modos independentes
 
@@ -68,6 +79,8 @@ As funcionalidades desta seção ainda não devem ser consideradas disponíveis.
 | **Auditar atendimento** | Documentos correspondentes, datas/modalidade, assinaturas/carimbos, preenchimento e regras institucionais |
 
 No modo Renomear, a ausência de C1 ou envelope no lote não será cobrada. Identidade insegura, arquivos vazios e conflitos de nomes continuarão bloqueando a operação. Renomear não aprovará a auditoria.
+
+**Invariável de identidade:** ausência de documento correspondente em conjunto parcial é pendência de auditoria. Já um conflito de identidade efetivamente observado entre documentos comprovadamente vinculados ao mesmo atendimento bloqueia a renomeação automática dos itens afetados até conferência humana. Compartilhar pasta, data ou grupo documental não prova esse vínculo e não basta para inferir conflito.
 
 A auditoria exigirá indicação de que o conjunto está completo para conferência. Em conjunto parcial, um documento não encontrado será uma pendência de conferência, sem concluir que está faltando.
 
@@ -87,9 +100,10 @@ Validar com 10–20 documentos conferidos por humano, nas quatro posições, em 
 - Selecionar inicialmente uma pasta por vez e informar o grupo esperado: C1, envelope/recibo, DT ou diversos.
 - Especializar a leitura pelo grupo; distinguir frente/verso e modelos de recibos.
 - Sinalizar incompatibilidade entre o tipo esperado e o conteúdo, sem forçar a classificação.
-- Acrescentar `_mensal` aos nomes aplicáveis mediante evidência explícita ou confirmação manual.
-- Invalidar estado anterior de renomeação se uma edição mudar o nome proposto.
-- Evitar nova renomeação de arquivos já padronizados.
+- Acrescentar `_mensal` aos três tipos elegíveis conforme os padrões definidos acima, mediante evidência explícita no documento (inclusive no campo de descrição do recibo) ou confirmação manual.
+- Exigir número impresso com seis dígitos e completar zeros à esquerda somente nos formulários manuais; revisar leituras parciais e números maiores que seis dígitos.
+- Preservar a invalidação já existente do estado anterior quando a edição mudar o nome proposto, estendendo-a à nova marca mensal.
+- Preservar a exclusão já existente de arquivos cujo nome atual coincide com o proposto.
 - Exibir recorte do prontuário, leituras/confianças dos leitores e motivo de recusa.
 - Resumir exclusões por baixa confiança, divergência, campo ausente, orientação pendente, duplicidade, arquivo já padronizado e outros bloqueios.
 
@@ -146,11 +160,12 @@ Usar cópias dos documentos nas primeiras rodadas. Manter a pasta no mesmo local
 - Não usar computador público/compartilhado ou pasta sincronizada quando a política exigir permanência exclusiva na máquina.
 - Usar apenas identificadores operacionais necessários nos nomes finais.
 - Não registrar conteúdo sensível em telemetria ou logs remotos.
+- O CSV local de inconsistências contém prontuários, nomes de arquivos e valores/observações; é um documento sensível e deve receber os mesmos cuidados de armazenamento e compartilhamento dos originais.
 - Conformidade institucional depende também de governança, retenção e controles organizacionais.
 
 ## Governança
 
-- `main`: produção/estável; **não mergear sem autorização explícita do André**.
+- `main`: branch destinada à versão estável, **ainda não liberada para produção enquanto houver o bloqueador dos ativos externos do PaddleOCR**; não presumir que o conteúdo atual atende ao gate de produção. **Não mergear sem autorização explícita do André**.
 - `develop`: integração e homologação.
 - Fluxo: correção → typecheck/testes/build → Codex e Copilot → correção dos achados → autorização de merge em develop → CI pós-merge → confirmação do deploy → teste real.
 - A CI de develop publica automaticamente a homologação após sucesso. Não presumir conclusão do deploy sem verificá-la.
