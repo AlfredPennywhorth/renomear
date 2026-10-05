@@ -90,8 +90,11 @@ O prontuário normalizado para seis dígitos é a chave institucional de víncul
 | Documento | Região esperada do prontuário |
 | --- | --- |
 | C1 frente | Canto superior direito; pode ser manuscrito |
+| C1 verso | Ainda sem posição institucional padronizada; anotação do prontuário será solicitada aos responsáveis |
 | DT | Região superior esquerda, aproximadamente no primeiro terço da altura |
 | Envelope/recibo | Canto superior direito |
+
+A região calibrada hoje existente para C1 verso é uma hipótese técnica, não um padrão institucional confirmado. Sem prontuário legível e seguro, o verso permanece em revisão; não inferir o número por ordem de digitalização ou arquivo vizinho. A futura posição de anotação deverá ser definida e validada com novas amostras antes da calibração. A ausência da anotação nos documentos anteriores à padronização não constitui, por si só, não conformidade documental.
 
 As posições são referências do formulário, não coordenadas rígidas da folha A4. O número da DT e a sequência do envelope são identificadores documentais distintos do prontuário.
 
@@ -136,8 +139,9 @@ Repetir um lote maior após validar a entrega 1. Não reduzir limiares de identi
 | Datas e modalidade | Reunião, emergência e coerência entre datas |
 | Assinaturas e carimbos | Requisitos por tipo documental |
 | Preenchimento | Campos obrigatórios, inutilização e demais exigências |
-| Identificação | Correspondência de prontuário e número entre documentos |
+| Identificação | Correspondência do prontuário normalizado; validação independente do identificador de cada documento |
 
+- Prontuários devem corresponder nos documentos vinculados. Não exigir igualdade entre número da DT e sequência do envelope/recibo: pertencem a identificadores distintos. Comparar números documentais somente entre representações comprovadas do mesmo documento (por exemplo, frente/verso), após confirmação desse vínculo; se essa relação não estiver estabelecida, validar cada número separadamente.
 - Cada item terá resultado, motivo e registro de conferência humana.
 - Mensal dispensa somente a C1 correspondente; as demais regras aplicáveis permanecem.
 - Emergência exige envelope; quando não assinado, deve ter o carimbo indicando que a assinatura está no recibo manual.
