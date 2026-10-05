@@ -157,20 +157,10 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
     ? normalizeProntuario(document.prontuario) !== null
     : document.kind === 'FICHA_C1_VERSO'
 
-  const humanResolvable = new Set([
-    'automation-rule-coverage',
-    'ocr-confidence',
-    'ocr-field-confidence',
-    'ocr-prontuario-conflict',
-    'ocr-identity-confidence',
-    'ocr-paddle-unavailable',
-    'ocr-error',
-    'cross-date-missing',
-  ])
+  // REVISAR alerts, including missing or ambiguous cross-document matches,
+  // may be resolved by human inspection. Only a confirmed NÃO CONFORME blocks approval.
   const hasBlockingValidation = document.validations.some(
-    (item) =>
-      !humanResolvable.has(item.id) &&
-      (item.status === 'REVISAR' || item.status === 'NAO_CONFORME'),
+    (item) => item.status === 'NAO_CONFORME',
   )
 
   const dateAllowsManualApproval = !document.documentDate || dateValidation.ok
@@ -309,7 +299,7 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
         <div className="section-heading">
           <div>
             <h3>Verificações</h3>
-            <p>Alertas automáticos podem ser resolvidos pela conferência humana; não conformidades e cruzamentos continuam bloqueando a aprovação.</p>
+            <p>Alertas marcados como REVISAR podem ser resolvidos pela conferência humana. Itens NÃO CONFORME continuam bloqueando a aprovação.</p>
           </div>
         </div>
 
