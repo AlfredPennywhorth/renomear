@@ -214,7 +214,7 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
           <input
             inputMode="numeric"
             value={prontuarioDraft}
-            placeholder="000000"
+            placeholder="Ex.: 000136"
             maxLength={6}
             onChange={(event) => setProntuarioDraft(event.target.value.replace(/\D/g, '').slice(0, 6))}
             onBlur={(event) => normalizeAndUpdateProntuario(event.target.value)}

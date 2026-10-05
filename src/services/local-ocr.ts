@@ -1,7 +1,6 @@
 import { createWorker, OEM, PSM, type Worker } from 'tesseract.js'
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist'
 import type { AnalyzedDocument } from '../domain/document'
-import { normalizeProntuario } from '../domain/prontuario'
 import { suggestFileName } from './naming'
 import { extractOcrFields } from './ocr-extraction'
 import {
@@ -11,6 +10,7 @@ import {
   getProntuarioRegion,
 } from './document-calibration'
 import { recognizeProntuarioWithPaddle } from './paddle-ocr'
+import { decideProntuario } from './prontuario-decision'
 import type { DirectoryHandleLike } from './local-rename'
 
 export type OcrProgress = {
@@ -22,9 +22,6 @@ export type OcrProgress = {
 }
 
 const OCR_MIN_CONFIDENCE = 72
-const PADDLE_ID_MIN_CONFIDENCE = 0.84
-const TESSERACT_ID_MIN_CONFIDENCE = 0.88
-const CONSENSUS_MIN_CONFIDENCE = 0.55
 
 function asset(path: string): string {
   const base = import.meta.env.BASE_URL || './'
@@ -93,89 +90,6 @@ function score01(value: number | null | undefined, isPercent = false): number {
   if (value == null || !Number.isFinite(value)) return 0
   const score = isPercent ? value / 100 : value
   return Math.max(0, Math.min(1, score))
-}
-
-type IdentityDecision = {
-  value: string | null
-  confidence: number | null
-  source: AnalyzedDocument['prontuarioOcrSource']
-  conflict: boolean
-  lowConfidence: boolean
-}
-
-function decideProntuario(
-  current: AnalyzedDocument,
-  tesseractValue: string | null,
-  tesseractConfidence: number,
-  paddleValue: string | null,
-  paddleConfidence: number,
-): IdentityDecision {
-  if (
-    current.prontuarioOcrSource === 'MANUAL' &&
-    current.prontuario &&
-    normalizeProntuario(current.prontuario)
-  ) {
-    return {
-      value: normalizeProntuario(current.prontuario),
-      confidence: 1,
-      source: 'MANUAL',
-      conflict: false,
-      lowConfidence: false,
-    }
-  }
-
-  if (tesseractValue && paddleValue) {
-    if (tesseractValue !== paddleValue) {
-      return {
-        value: null,
-        confidence: Math.max(tesseractConfidence, paddleConfidence),
-        source: null,
-        conflict: true,
-        lowConfidence: false,
-      }
-    }
-
-    if (
-      tesseractConfidence >= CONSENSUS_MIN_CONFIDENCE &&
-      paddleConfidence >= CONSENSUS_MIN_CONFIDENCE
-    ) {
-      return {
-        value: tesseractValue,
-        confidence: Math.max(tesseractConfidence, paddleConfidence),
-        source: 'CONSENSUS',
-        conflict: false,
-        lowConfidence: false,
-      }
-    }
-  }
-
-  if (paddleValue && paddleConfidence >= PADDLE_ID_MIN_CONFIDENCE) {
-    return {
-      value: paddleValue,
-      confidence: paddleConfidence,
-      source: 'PADDLE',
-      conflict: false,
-      lowConfidence: false,
-    }
-  }
-
-  if (tesseractValue && tesseractConfidence >= TESSERACT_ID_MIN_CONFIDENCE) {
-    return {
-      value: tesseractValue,
-      confidence: tesseractConfidence,
-      source: 'TESSERACT',
-      conflict: false,
-      lowConfidence: false,
-    }
-  }
-
-  return {
-    value: null,
-    confidence: Math.max(tesseractConfidence, paddleConfidence) || null,
-    source: null,
-    conflict: false,
-    lowConfidence: Boolean(tesseractValue || paddleValue),
-  }
 }
 
 export async function analyzeDocumentsWithLocalOcr(
@@ -302,12 +216,25 @@ export async function analyzeDocumentsWithLocalOcr(
           ? score01(calibratedConfidence.prontuario, true)
           : 0
 
+        const printedIdentityKind =
+          kind === 'ENVELOPE' ||
+          kind === 'RECIBO_ATENDIMENTO' ||
+          kind === 'DECLARACAO_TRANSITO'
+        const corroboratedProntuario =
+          printedIdentityKind &&
+          calibrated.prontuario &&
+          fields.prontuario &&
+          calibrated.prontuario === fields.prontuario
+            ? calibrated.prontuario
+            : null
+
         const identity = decideProntuario(
           current,
           tesseractProntuario ?? null,
           tesseractConfidence,
           paddleValue,
           paddleConfidence,
+          corroboratedProntuario,
         )
 
         const numeroDocumento = current.numeroDocumentoOcrSource === 'MANUAL'

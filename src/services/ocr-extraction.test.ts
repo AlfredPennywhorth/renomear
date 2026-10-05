@@ -16,4 +16,20 @@ Prontuário 001072
     expect(result.prontuario).toBe('001072')
     expect(result.documentDate).toBe('05/10/2024')
   })
+
+  it('extrai prontuário de envelope quando o rótulo usa Nº', () => {
+    const result = extractOcrFields(`
+OBRA DA PIEDADE
+Prontuário Nº 000136
+Data da Reunião 05/10/2024
+Sequência 041972
+C - Mensal R$ 800,00
+`)
+
+    expect(result.kind).toBe('ENVELOPE')
+    expect(result.prontuario).toBe('000136')
+    expect(result.numeroDocumento).toBe('041972')
+    expect(result.documentDate).toBe('05/10/2024')
+    expect(result.isMonthly).toBe(true)
+  })
 })

@@ -47,8 +47,8 @@ export function extractOcrFields(rawText: string): OcrFields {
   const kind = classify(rawText)
 
   const prontuarioRaw = firstMatch(text, [
-    /PRONTUARIO\s*[:#-]?\s*(\d{1,6})\b/,
-    /PRONT\.?\s*[:#-]?\s*(\d{1,6})\b/,
+    /PRONTUARIO\s*(?:N(?:O|º|°)\.?\s*)?[:#-]?\s*(\d{1,6})\b/,
+    /PRONT\.?\s*(?:N(?:O|º|°)\.?\s*)?[:#-]?\s*(\d{1,6})\b/,
   ])
 
   const sequence = firstMatch(text, [
