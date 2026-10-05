@@ -3,6 +3,7 @@ import type { AnalyzedDocument, DocumentKind, ReviewStatus } from '../domain/doc
 import { normalizeProntuario } from '../domain/prontuario'
 import { validateBrazilianDate, validateSequence } from '../domain/validation'
 import { suggestFileName } from '../services/naming'
+import { sequencePatchFromManualEdit, shouldInvalidateRenameState } from '../services/review-edit'
 
 type Props = {
   document: AnalyzedDocument
@@ -59,7 +60,14 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
       next.manualReviewApproved = false
       if (document.reviewStatus === 'OK') next.reviewStatus = 'REVISAR'
     }
+
     next.suggestedName = suggestFileName(next)
+
+    if (shouldInvalidateRenameState(document, patch, next.suggestedName)) {
+      next.renameState = undefined
+      next.lastRenameError = null
+    }
+
     onChange(next)
   }
 
@@ -87,11 +95,11 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
   const commitSequence = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 8)
     setSequenceDraft(digits)
-    update({
-      numeroDocumento: digits || null,
-      numeroDocumentoConfidence: digits ? 1 : null,
-      numeroDocumentoOcrSource: digits ? 'MANUAL' : null,
-    })
+
+    const patch = sequencePatchFromManualEdit(document, digits)
+    if (!patch) return
+
+    update(patch)
   }
 
   const setStatus = (status: ReviewStatus) => {
