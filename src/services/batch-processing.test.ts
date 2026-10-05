@@ -298,6 +298,32 @@ describe('analyzeBatch', () => {
     expect(isAutomaticRenameReady(result)).toBe(false)
   })
 
+
+  it.each(['ocr-empty-file', 'ocr-orientation-pdf'])(
+    'bloqueia %s mesmo com identidade segura e aprovação manual anterior',
+    (id) => {
+      const document = doc({
+        kind: 'DECLARACAO_TRANSITO',
+        prontuario: '001072',
+        prontuarioConfidence: 1,
+        prontuarioOcrSource: 'MANUAL',
+        numeroDocumento: '003604',
+        numeroDocumentoConfidence: 1,
+        suggestedName: '001072_003604_DT.pdf',
+        manualReviewApproved: true,
+        reviewStatus: 'OK',
+        validations: [{ id, label: 'Bloqueio operacional', value: null, status: 'REVISAR' }],
+      })
+
+      expect(isAutomaticRenameReady(document)).toBe(false)
+      expect(isRenameReady(document)).toBe(false)
+      const reconciled = reconcileReviewStatus(document)
+      expect(reconciled.manualReviewApproved).toBe(false)
+      expect(reconciled.reviewStatus).toBe('REVISAR')
+      expect(isRenameReady(reconciled)).toBe(false)
+    },
+  )
+
   it('resume automáticos, revisões e não conformes', () => {
     const analyzed = analyzeBatch([
       doc({ kind: 'DECLARACAO_TRANSITO', prontuario: '1990', numeroDocumento: '013068', documentDate: '02/09/2026' }),

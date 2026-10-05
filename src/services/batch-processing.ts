@@ -110,8 +110,18 @@ export function summarizeBatch(documents: AnalyzedDocument[]): BatchAnalysisSumm
 }
 
 
+export function hasOperationalReviewBlock(document: AnalyzedDocument): boolean {
+  return document.validations.some(
+    (item) =>
+      item.status === 'REVISAR' &&
+      (item.id === 'ocr-empty-file' || item.id === 'ocr-orientation-pdf'),
+  )
+}
+
 export function isAutomaticRenameReady(document: AnalyzedDocument): boolean {
   if (document.reviewStatus === 'NAO_CONFORME') return false
+  if (document.validations.some((item) => item.status === 'NAO_CONFORME')) return false
+  if (hasOperationalReviewBlock(document)) return false
   if (!document.suggestedName || !document.kind || !document.prontuario) return false
   if (document.kind === 'NAO_PADRONIZADO') return false
   if (!normalizeProntuario(document.prontuario)) return false
@@ -161,6 +171,7 @@ export function isAutomaticRenameReady(document: AnalyzedDocument): boolean {
 
 
 export function isRenameReady(document: AnalyzedDocument): boolean {
+  if (hasOperationalReviewBlock(document)) return false
   if (document.reviewStatus === 'NAO_CONFORME') return false
   if (document.validations.some((item) => item.status === 'NAO_CONFORME')) return false
   if (!document.suggestedName || !document.kind || !document.prontuario) return false
@@ -187,6 +198,9 @@ export function isRenameReady(document: AnalyzedDocument): boolean {
 export function reconcileReviewStatus(document: AnalyzedDocument): AnalyzedDocument {
   if (document.validations.some((item) => item.status === 'NAO_CONFORME')) {
     return { ...document, manualReviewApproved: false, reviewStatus: 'NAO_CONFORME' }
+  }
+  if (hasOperationalReviewBlock(document)) {
+    return { ...document, manualReviewApproved: false, reviewStatus: 'REVISAR' }
   }
   if (document.manualReviewApproved) {
     return { ...document, reviewStatus: 'OK' }

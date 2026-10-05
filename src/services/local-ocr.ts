@@ -291,6 +291,7 @@ export async function analyzeDocumentsWithLocalOcr(
           rotationDegrees: isPdfDocument ? 0 : oriented.rotation,
           validations: current.validations.filter(
             (item) =>
+              item.id !== 'ocr-empty-file' &&
               item.id !== 'ocr-confidence' &&
               item.id !== 'ocr-field-confidence' &&
               item.id !== 'ocr-error' &&
