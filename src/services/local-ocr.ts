@@ -103,12 +103,13 @@ type IdentityDecision = {
   lowConfidence: boolean
 }
 
-function decideProntuario(
+export function decideProntuario(
   current: AnalyzedDocument,
   tesseractValue: string | null,
   tesseractConfidence: number,
   paddleValue: string | null,
   paddleConfidence: number,
+  corroboratedValue: string | null = null,
 ): IdentityDecision {
   if (
     current.prontuarioOcrSource === 'MANUAL' &&
@@ -119,6 +120,20 @@ function decideProntuario(
       value: normalizeProntuario(current.prontuario),
       confidence: 1,
       source: 'MANUAL',
+      conflict: false,
+      lowConfidence: false,
+    }
+  }
+
+  if (
+    corroboratedValue &&
+    tesseractValue &&
+    corroboratedValue === tesseractValue
+  ) {
+    return {
+      value: corroboratedValue,
+      confidence: 0.9,
+      source: 'CONSENSUS',
       conflict: false,
       lowConfidence: false,
     }
@@ -302,12 +317,25 @@ export async function analyzeDocumentsWithLocalOcr(
           ? score01(calibratedConfidence.prontuario, true)
           : 0
 
+        const printedIdentityKind =
+          kind === 'ENVELOPE' ||
+          kind === 'RECIBO_ATENDIMENTO' ||
+          kind === 'DECLARACAO_TRANSITO'
+        const corroboratedProntuario =
+          printedIdentityKind &&
+          calibrated.prontuario &&
+          fields.prontuario &&
+          calibrated.prontuario === fields.prontuario
+            ? calibrated.prontuario
+            : null
+
         const identity = decideProntuario(
           current,
           tesseractProntuario ?? null,
           tesseractConfidence,
           paddleValue,
           paddleConfidence,
+          corroboratedProntuario,
         )
 
         const numeroDocumento = current.numeroDocumentoOcrSource === 'MANUAL'
