@@ -132,53 +132,12 @@ function App() {
         return (nameCounts.get(key) ?? 0) === 1 && document.originalName !== document.suggestedName
       })
 
-      let nextDocuments = analyzed
-      let renamed = 0
-      let renameErrors = 0
-
-      if (automaticCandidates.length > 0) {
-        const results = await renameApprovedDocuments(directory, automaticCandidates, { requireOk: false })
-        const byId = new Map(results.map((result) => [result.id, result]))
-        renamed = results.filter((result) => result.status === 'RENOMEADO').length
-        renameErrors = results.filter((result) => result.status === 'ERRO').length
-
-        nextDocuments = analyzed.map((document) => {
-          const result = byId.get(document.id)
-          if (!result) return document
-          if (result.status === 'RENOMEADO') {
-            return {
-              ...document,
-              originalName: result.to,
-              rotationDegrees: 0 as const,
-              validations: document.validations.map((item) =>
-                item.id === 'ocr-orientation'
-                  ? {
-                      ...item,
-                      note: 'A orientação detectada foi aplicada fisicamente durante a renomeação.',
-                    }
-                  : item,
-              ),
-              renameState: 'RENOMEADO' as const,
-              lastRenameError: null,
-            }
-          }
-          if (result.status === 'ERRO') {
-            return {
-              ...document,
-              reviewStatus: 'REVISAR' as const,
-              renameState: 'ERRO' as const,
-              lastRenameError: result.error ?? 'Falha ao renomear.',
-            }
-          }
-          return document
-        })
-      }
-
-      setDocuments(nextDocuments)
+      setDocuments(analyzed)
+      setBatchCandidates(automaticCandidates)
       setMessage(
         String(summary.total) + ' analisado(s): ' +
-        String(renamed) + ' renomeado(s) automaticamente; ' +
-        String(summary.revisar + renameErrors) + ' para revisão; ' +
+        String(automaticCandidates.length) + ' pronto(s) para renomear após confirmação; ' +
+        String(summary.revisar) + ' para revisão; ' +
         String(summary.naoConformes) + ' não conforme(s).',
       )
     } catch (error) {
