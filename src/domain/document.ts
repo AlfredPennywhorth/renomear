@@ -42,6 +42,11 @@ export interface AnalyzedDocument {
   lowerInk?: InkZoneStatus | null
   suggestedName: string | null
   confidence: number | null
+  prontuarioConfidence?: number | null
+  numeroDocumentoConfidence?: number | null
+  prontuarioOcrSource?: 'TESSERACT' | 'PADDLE' | 'CONSENSUS' | 'MANUAL' | null
+  numeroDocumentoOcrSource?: 'TESSERACT' | 'MANUAL' | null
+  manualReviewApproved?: boolean
   rotationDegrees?: 0 | 90 | 180 | 270
   reviewStatus: ReviewStatus
   validations: DocumentValidation[]

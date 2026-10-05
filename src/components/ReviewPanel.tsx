@@ -3,6 +3,7 @@ import type { AnalyzedDocument, DocumentKind, ReviewStatus } from '../domain/doc
 import { normalizeProntuario } from '../domain/prontuario'
 import { validateBrazilianDate, validateSequence } from '../domain/validation'
 import { suggestFileName } from '../services/naming'
+import { sequencePatchFromManualEdit, shouldInvalidateRenameState } from '../services/review-edit'
 
 type Props = {
   document: AnalyzedDocument
@@ -21,12 +22,29 @@ const kindOptions: Array<{ value: DocumentKind; label: string }> = [
   { value: 'NAO_PADRONIZADO', label: 'Documento não padronizado' },
 ]
 
+function formatDateDraft(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8)
+  if (digits.length <= 2) return digits
+  if (digits.length <= 4) return digits.slice(0, 2) + '/' + digits.slice(2)
+  return digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4)
+}
+
 function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
   const [prontuarioDraft, setProntuarioDraft] = useState(document.prontuario ?? '')
+  const [sequenceDraft, setSequenceDraft] = useState(document.numeroDocumento ?? '')
+  const [dateDraft, setDateDraft] = useState(document.documentDate ?? '')
 
   useEffect(() => {
     setProntuarioDraft(document.prontuario ?? '')
   }, [document.id, document.prontuario])
+
+  useEffect(() => {
+    setSequenceDraft(document.numeroDocumento ?? '')
+  }, [document.id, document.numeroDocumento])
+
+  useEffect(() => {
+    setDateDraft(document.documentDate ?? '')
+  }, [document.id, document.documentDate])
   const update = (patch: Partial<AnalyzedDocument>) => {
     const next = { ...document, ...patch }
     const editableFields = new Set([
@@ -38,10 +56,18 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
       'isMonthly',
     ])
     const changedAuditInput = Object.keys(patch).some((key) => editableFields.has(key))
-    if (changedAuditInput && document.reviewStatus === 'OK' && patch.reviewStatus === undefined) {
-      next.reviewStatus = 'REVISAR'
+    if (changedAuditInput && patch.reviewStatus === undefined) {
+      next.manualReviewApproved = false
+      if (document.reviewStatus === 'OK') next.reviewStatus = 'REVISAR'
     }
+
     next.suggestedName = suggestFileName(next)
+
+    if (shouldInvalidateRenameState(document, patch, next.suggestedName)) {
+      next.renameState = undefined
+      next.lastRenameError = null
+    }
+
     onChange(next)
   }
 
@@ -51,24 +77,52 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
     setProntuarioDraft(nextValue)
     update({
       prontuario: normalized,
+      prontuarioConfidence: normalized ? 1 : null,
+      prontuarioOcrSource: normalized ? 'MANUAL' : null,
+      manualReviewApproved: false,
+      validations: normalized
+        ? document.validations.filter(
+            (item) =>
+              item.id !== 'ocr-prontuario-conflict' &&
+              item.id !== 'ocr-identity-confidence' &&
+              item.id !== 'ocr-paddle-unavailable',
+          )
+        : document.validations,
       reviewStatus: 'REVISAR',
     })
   }
 
+  const commitSequence = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 8)
+    setSequenceDraft(digits)
+
+    const patch = sequencePatchFromManualEdit(document, digits)
+    if (!patch) return
+
+    update(patch)
+  }
+
   const setStatus = (status: ReviewStatus) => {
+    if (status === 'OK' && document.reviewStatus === 'NAO_CONFORME') return
+
     if (status === 'OK') {
       update({
         reviewStatus: 'OK',
+        manualReviewApproved: true,
         validations: document.validations.filter(
           (item) =>
             item.id !== 'automation-rule-coverage' &&
             item.id !== 'ocr-confidence' &&
-            item.id !== 'ocr-field-confidence',
+            item.id !== 'ocr-field-confidence' &&
+            item.id !== 'ocr-prontuario-conflict' &&
+            item.id !== 'ocr-identity-confidence' &&
+            item.id !== 'ocr-paddle-unavailable' &&
+            item.id !== 'ocr-error',
         ),
       })
       return
     }
-    update({ reviewStatus: status })
+    update({ reviewStatus: status, manualReviewApproved: false })
   }
 
   const sequenceRequired =
@@ -107,6 +161,11 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
     'automation-rule-coverage',
     'ocr-confidence',
     'ocr-field-confidence',
+    'ocr-prontuario-conflict',
+    'ocr-identity-confidence',
+    'ocr-paddle-unavailable',
+    'ocr-error',
+    'cross-date-missing',
   ])
   const hasBlockingValidation = document.validations.some(
     (item) =>
@@ -114,11 +173,14 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
       (item.status === 'REVISAR' || item.status === 'NAO_CONFORME'),
   )
 
+  const dateAllowsManualApproval = !document.documentDate || dateValidation.ok
+
   const canApprove =
+    document.reviewStatus !== 'NAO_CONFORME' &&
     Boolean(document.suggestedName) &&
     prontuarioValidation &&
     sequenceValidation.ok &&
-    dateValidation.ok &&
+    dateAllowsManualApproval &&
     (document.kind !== 'FICHA_C1' || document.caseMode !== null) &&
     (document.kind !== 'FICHA_C1_VERSO' || Boolean(document.prontuario)) &&
     !hasBlockingValidation
@@ -164,10 +226,15 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
           Sequência / nº documento
           <input
             inputMode="numeric"
-            value={document.numeroDocumento ?? ''}
+            value={sequenceDraft}
             placeholder="Ex.: 054831"
+            maxLength={8}
             aria-invalid={!sequenceValidation.ok}
-            onChange={(event) => update({ numeroDocumento: event.target.value })}
+            onChange={(event) => setSequenceDraft(event.target.value.replace(/\D/g, '').slice(0, 8))}
+            onBlur={(event) => commitSequence(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') event.currentTarget.blur()
+            }}
           />
           {!sequenceValidation.ok && <small className="field-error">{sequenceValidation.reason}</small>}
         </label>
@@ -177,12 +244,14 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
           <input
             type="text"
             inputMode="numeric"
-            value={document.documentDate ?? ''}
+            value={dateDraft}
             placeholder="DD/MM/AAAA"
             aria-invalid={!dateValidation.ok}
-            onChange={(event) => update({ documentDate: event.target.value })}
+            onChange={(event) => setDateDraft(formatDateDraft(event.target.value))}
+            onBlur={(event) => update({ documentDate: event.target.value || null })}
           />
           {!dateValidation.ok && <small className="field-error">{dateValidation.reason}</small>}
+          <small>A data é usada somente nas validações da auditoria; ela não compõe o nome do arquivo. Se estiver ilegível para o OCR, a conferência humana pode concluir a revisão.</small>
         </label>
       </div>
 
@@ -271,7 +340,7 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
           type="button"
           onClick={() => setStatus('OK')}
           disabled={!canApprove}
-          title={!canApprove ? 'Corrija os campos obrigatórios, a marcação da C1 e as validações pendentes antes de aprovar.' : undefined}
+          title={!canApprove ? 'Confira tipo, prontuário, número/sequência quando exigido e eventuais não conformidades antes de aprovar.' : undefined}
         >
           Aprovar como OK
         </button>

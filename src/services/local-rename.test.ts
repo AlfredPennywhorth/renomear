@@ -149,6 +149,29 @@ describe('renameApprovedDocuments', () => {
     expect(removed).toEqual([])
   })
 
+  it('permite ajustar somente a caixa da sigla DT sem colisão falsa', async () => {
+    const original = new Uint8Array([1, 2, 3, 4])
+    const { directory, files, removed } = fakeDirectory({
+      '001072_003604_dt.jpg': original,
+    })
+
+    const [result] = await renameApprovedDocuments(
+      directory,
+      [makeDocument({
+        originalName: '001072_003604_dt.jpg',
+        kind: 'DECLARACAO_TRANSITO',
+        prontuario: '001072',
+        numeroDocumento: '003604',
+        suggestedName: '001072_003604_DT.jpg',
+      })],
+    )
+
+    expect(result.status).toBe('RENOMEADO')
+    expect(files.has('001072_003604_dt.jpg')).toBe(false)
+    expect([...files.get('001072_003604_DT.jpg')!]).toEqual([...original])
+    expect(removed.some((name) => name.startsWith('.renomear-source-'))).toBe(true)
+  })
+
   it('preserva arquivo original vazio para revisão', async () => {
     const { directory, files, removed } = fakeDirectory({ 'origem.jpg': new Uint8Array() })
 

@@ -1,12 +1,16 @@
 import { PSM, type Worker } from 'tesseract.js'
-import type { AnalyzedDocument } from '../domain/document'
+import type { AnalyzedDocument, DocumentKind } from '../domain/document'
 import { normalizeProntuario } from '../domain/prontuario'
 
-export function scoreKnownHeader(text: string): number {
-  const value = text
+function normalizeText(text: string): string {
+  return text
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toUpperCase()
+}
+
+export function scoreKnownHeader(text: string): number {
+  const value = normalizeText(text)
 
   let score = 0
   if (value.includes('FICHA DE APRESENTACAO DE CASO')) score += 8
@@ -15,7 +19,32 @@ export function scoreKnownHeader(text: string): number {
   if (value.includes('DECLARACAO DE TRANSITO')) score += 8
   if (value.includes('RECIBO DE ATENDIMENTO')) score += 7
   if (value.includes('PREENCHIDO NA REUNIAO')) score += 2
+  if (value.includes('DATA DA REUNIAO')) score += 2
+  if (value.includes('SEQUENCIA')) score += 1
   return score
+}
+
+export function classifyKnownHeader(text: string): DocumentKind | null {
+  const value = normalizeText(text)
+
+  if (value.includes('FICHA DE APRESENTACAO DE CASO')) return 'FICHA_C1'
+  if (value.includes('PEDIDO DE ROUPAS E DIVERSOS')) return 'FICHA_C1_VERSO'
+  if (value.includes('DECLARACAO DE TRANSITO')) return 'DECLARACAO_TRANSITO'
+  if (value.includes('RECIBO DE ATENDIMENTO') && value.includes('OBRA DA PIEDADE')) {
+    return 'RECIBO_EMERGENCIA_MANUAL'
+  }
+  if (
+    value.includes('OBRA DA PIEDADE') &&
+    (
+      value.includes('PREENCHIDO NA REUNIAO') ||
+      value.includes('DATA DA REUNIAO') ||
+      value.includes('SEQUENCIA')
+    )
+  ) {
+    return 'ENVELOPE'
+  }
+
+  return null
 }
 
 function newCanvas(width: number, height: number): HTMLCanvasElement {
@@ -63,6 +92,57 @@ export function cropCanvas(
   return output
 }
 
+export function prepareNumericRegion(source: HTMLCanvasElement): HTMLCanvasElement {
+  const scale = 3
+  const output = newCanvas(source.width * scale, source.height * scale)
+  const context = output.getContext('2d', { alpha: false, willReadFrequently: true })
+  if (!context) throw new Error('Não foi possível preparar o campo numérico para OCR.')
+
+  context.fillStyle = '#fff'
+  context.fillRect(0, 0, output.width, output.height)
+  context.imageSmoothingEnabled = true
+  context.drawImage(source, 0, 0, output.width, output.height)
+
+  const image = context.getImageData(0, 0, output.width, output.height)
+  for (let index = 0; index < image.data.length; index += 4) {
+    const red = image.data[index]
+    const green = image.data[index + 1]
+    const blue = image.data[index + 2]
+    const gray = Math.round((red * 0.299) + (green * 0.587) + (blue * 0.114))
+    const contrasted = gray >= 220
+      ? 255
+      : gray <= 145
+        ? 0
+        : Math.round(((gray - 145) / 75) * 255)
+    image.data[index] = contrasted
+    image.data[index + 1] = contrasted
+    image.data[index + 2] = contrasted
+    image.data[index + 3] = 255
+  }
+  context.putImageData(image, 0, 0)
+
+  return output
+}
+
+export function getProntuarioRegion(
+  canvas: HTMLCanvasElement,
+  kind: AnalyzedDocument['kind'],
+): HTMLCanvasElement | null {
+  if (kind === 'FICHA_C1') {
+    return prepareNumericRegion(cropCanvas(canvas, 0.865, 0.105, 0.135, 0.055))
+  }
+  if (kind === 'FICHA_C1_VERSO') {
+    return prepareNumericRegion(cropCanvas(canvas, 0.80, 0, 0.20, 0.11))
+  }
+  if (kind === 'ENVELOPE' || kind === 'RECIBO_ATENDIMENTO') {
+    return prepareNumericRegion(cropCanvas(canvas, 0.84, 0.055, 0.16, 0.055))
+  }
+  if (kind === 'DECLARACAO_TRANSITO') {
+    return prepareNumericRegion(cropCanvas(canvas, 0.16, 0.255, 0.23, 0.06))
+  }
+  return null
+}
+
 async function recognize(
   worker: Worker,
   canvas: HTMLCanvasElement,
@@ -80,17 +160,28 @@ async function recognize(
 export async function detectDocumentOrientation(
   worker: Worker,
   source: HTMLCanvasElement,
-): Promise<{ canvas: HTMLCanvasElement; rotation: 0 | 90 | 180 | 270; score: number }> {
+): Promise<{
+  canvas: HTMLCanvasElement
+  rotation: 0 | 90 | 180 | 270
+  score: number
+  headerText: string
+}> {
   const candidates: Array<0 | 90 | 180 | 270> = [0, 90, 180, 270]
 
-  let best = { canvas: source, rotation: 0 as 0 | 90 | 180 | 270, score: -1 }
+  let best = {
+    canvas: source,
+    rotation: 0 as 0 | 90 | 180 | 270,
+    score: -1,
+    headerText: '',
+  }
 
   for (const rotation of candidates) {
     const canvas = rotateCanvas(source, rotation)
     const header = cropCanvas(canvas, 0, 0, 1, 0.22)
     const result = await recognize(worker, header, PSM.SPARSE_TEXT)
-    const score = scoreKnownHeader(result.data.text)
-    if (score > best.score) best = { canvas, rotation, score }
+    const headerText = result.data.text
+    const score = scoreKnownHeader(headerText)
+    if (score > best.score) best = { canvas, rotation, score, headerText }
   }
 
   return best
@@ -98,6 +189,28 @@ export async function detectDocumentOrientation(
 
 function digitsOnly(value: string): string {
   return value.replace(/\D/g, '')
+}
+
+function sixDigitCandidateFromRecognition(result: {
+  data: {
+    text: string
+    confidence: number
+    words?: Array<{ text: string; confidence: number }>
+  }
+}): { value: string | null; confidence: number } {
+  const word = result.data.words?.find((item) => /^\d{6}$/.test(item.text.replace(/\D/g, '')))
+  if (word) {
+    return {
+      value: word.text.replace(/\D/g, ''),
+      confidence: word.confidence,
+    }
+  }
+
+  const match = result.data.text.match(/(?:^|\D)(\d{6})(?:\D|$)/)
+  return {
+    value: match?.[1] ?? null,
+    confidence: match ? result.data.confidence : 0,
+  }
 }
 
 function dateFromText(value: string): string | null {
@@ -152,8 +265,10 @@ export async function extractCalibratedFields(
   kind: AnalyzedDocument['kind'],
 ): Promise<CalibratedFields> {
   if (kind === 'FICHA_C1') {
-    const dateRegion = cropCanvas(canvas, 0.70, 0.105, 0.18, 0.09)
-    const prontuarioRegion = cropCanvas(canvas, 0.87, 0.105, 0.13, 0.09)
+    const dateRegion = prepareNumericRegion(cropCanvas(canvas, 0.70, 0.105, 0.18, 0.055))
+    const prontuarioRegion = getProntuarioRegion(canvas, kind)
+    if (!prontuarioRegion) return {}
+
     const dateResult = await recognize(worker, dateRegion, PSM.SINGLE_LINE, '0123456789/.-')
     const prontuarioResult = await recognize(worker, prontuarioRegion, PSM.SINGLE_LINE, '0123456789')
     const rawProntuario = digitsOnly(prontuarioResult.data.text)
@@ -172,7 +287,8 @@ export async function extractCalibratedFields(
   }
 
   if (kind === 'FICHA_C1_VERSO') {
-    const region = cropCanvas(canvas, 0.80, 0, 0.20, 0.14)
+    const region = getProntuarioRegion(canvas, kind)
+    if (!region) return {}
     const result = await recognize(worker, region, PSM.SINGLE_LINE, '0123456789')
     const raw = digitsOnly(result.data.text)
     return {
@@ -182,11 +298,10 @@ export async function extractCalibratedFields(
   }
 
   if (kind === 'ENVELOPE' || kind === 'RECIBO_ATENDIMENTO') {
-    // Modelo Obra da Piedade do lote 04/10/2026:
-    // prontuário, data da reunião e sequência ficam empilhados no canto superior direito.
-    const prontuarioRegion = cropCanvas(canvas, 0.84, 0.055, 0.16, 0.055)
-    const dateRegion = cropCanvas(canvas, 0.84, 0.095, 0.16, 0.055)
-    const sequenceRegion = cropCanvas(canvas, 0.84, 0.125, 0.16, 0.055)
+    const prontuarioRegion = getProntuarioRegion(canvas, kind)
+    if (!prontuarioRegion) return {}
+    const dateRegion = prepareNumericRegion(cropCanvas(canvas, 0.84, 0.095, 0.16, 0.05))
+    const sequenceRegion = prepareNumericRegion(cropCanvas(canvas, 0.84, 0.125, 0.16, 0.05))
 
     const prontuarioResult = await recognize(worker, prontuarioRegion, PSM.SINGLE_LINE, '0123456789')
     const dateResult = await recognize(worker, dateRegion, PSM.SINGLE_LINE, '0123456789/.-')
@@ -210,21 +325,20 @@ export async function extractCalibratedFields(
   }
 
   if (kind === 'DECLARACAO_TRANSITO') {
-    // Modelo Declaração de Trânsito do lote 04/10/2026:
-    // número da DT e data ficam no quadro superior direito; prontuário na faixa Destinatário.
-    const numeroRegion = cropCanvas(canvas, 0.69, 0.12, 0.27, 0.075)
-    const dateRegion = cropCanvas(canvas, 0.72, 0.165, 0.22, 0.055)
-    const prontuarioRegion = cropCanvas(canvas, 0.16, 0.255, 0.23, 0.06)
+    const numeroRegion = prepareNumericRegion(cropCanvas(canvas, 0.69, 0.12, 0.27, 0.075))
+    const dateRegion = prepareNumericRegion(cropCanvas(canvas, 0.72, 0.165, 0.22, 0.055))
+    const prontuarioRegion = getProntuarioRegion(canvas, kind)
+    if (!prontuarioRegion) return {}
 
-    const numeroResult = await recognize(worker, numeroRegion, PSM.SINGLE_LINE, '0123456789')
+    const numeroResult = await recognize(worker, numeroRegion, PSM.SPARSE_TEXT, '0123456789')
     const dateResult = await recognize(worker, dateRegion, PSM.SINGLE_LINE, '0123456789/.-')
     const prontuarioResult = await recognize(worker, prontuarioRegion, PSM.SINGLE_LINE, '0123456789')
 
-    const rawNumero = digitsOnly(numeroResult.data.text)
+    const numeroCandidate = sixDigitCandidateFromRecognition(numeroResult)
     const rawProntuario = digitsOnly(prontuarioResult.data.text)
 
     return {
-      numeroDocumento: rawNumero.length >= 4 && rawNumero.length <= 8 ? rawNumero : null,
+      numeroDocumento: numeroCandidate.value,
       documentDate: dateFromText(dateResult.data.text),
       prontuario: rawProntuario.length >= 1 && rawProntuario.length <= 6
         ? normalizeProntuario(rawProntuario)
@@ -232,7 +346,7 @@ export async function extractCalibratedFields(
       fieldConfidence: {
         prontuario: prontuarioResult.data.confidence,
         documentDate: dateResult.data.confidence,
-        numeroDocumento: numeroResult.data.confidence,
+        numeroDocumento: numeroCandidate.confidence,
       },
     }
   }

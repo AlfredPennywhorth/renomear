@@ -1,9 +1,16 @@
 import { createWorker, OEM, PSM, type Worker } from 'tesseract.js'
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist'
 import type { AnalyzedDocument } from '../domain/document'
+import { normalizeProntuario } from '../domain/prontuario'
 import { suggestFileName } from './naming'
 import { extractOcrFields } from './ocr-extraction'
-import { detectDocumentOrientation, extractCalibratedFields } from './document-calibration'
+import {
+  classifyKnownHeader,
+  detectDocumentOrientation,
+  extractCalibratedFields,
+  getProntuarioRegion,
+} from './document-calibration'
+import { recognizeProntuarioWithPaddle } from './paddle-ocr'
 import type { DirectoryHandleLike } from './local-rename'
 
 export type OcrProgress = {
@@ -15,6 +22,9 @@ export type OcrProgress = {
 }
 
 const OCR_MIN_CONFIDENCE = 72
+const PADDLE_ID_MIN_CONFIDENCE = 0.84
+const TESSERACT_ID_MIN_CONFIDENCE = 0.88
+const CONSENSUS_MIN_CONFIDENCE = 0.55
 
 function asset(path: string): string {
   const base = import.meta.env.BASE_URL || './'
@@ -77,6 +87,95 @@ async function createLocalWorker(
   })
 
   return worker
+}
+
+function score01(value: number | null | undefined, isPercent = false): number {
+  if (value == null || !Number.isFinite(value)) return 0
+  const score = isPercent ? value / 100 : value
+  return Math.max(0, Math.min(1, score))
+}
+
+type IdentityDecision = {
+  value: string | null
+  confidence: number | null
+  source: AnalyzedDocument['prontuarioOcrSource']
+  conflict: boolean
+  lowConfidence: boolean
+}
+
+function decideProntuario(
+  current: AnalyzedDocument,
+  tesseractValue: string | null,
+  tesseractConfidence: number,
+  paddleValue: string | null,
+  paddleConfidence: number,
+): IdentityDecision {
+  if (
+    current.prontuarioOcrSource === 'MANUAL' &&
+    current.prontuario &&
+    normalizeProntuario(current.prontuario)
+  ) {
+    return {
+      value: normalizeProntuario(current.prontuario),
+      confidence: 1,
+      source: 'MANUAL',
+      conflict: false,
+      lowConfidence: false,
+    }
+  }
+
+  if (tesseractValue && paddleValue) {
+    if (tesseractValue !== paddleValue) {
+      return {
+        value: null,
+        confidence: Math.max(tesseractConfidence, paddleConfidence),
+        source: null,
+        conflict: true,
+        lowConfidence: false,
+      }
+    }
+
+    if (
+      tesseractConfidence >= CONSENSUS_MIN_CONFIDENCE &&
+      paddleConfidence >= CONSENSUS_MIN_CONFIDENCE
+    ) {
+      return {
+        value: tesseractValue,
+        confidence: Math.max(tesseractConfidence, paddleConfidence),
+        source: 'CONSENSUS',
+        conflict: false,
+        lowConfidence: false,
+      }
+    }
+  }
+
+  if (paddleValue && paddleConfidence >= PADDLE_ID_MIN_CONFIDENCE) {
+    return {
+      value: paddleValue,
+      confidence: paddleConfidence,
+      source: 'PADDLE',
+      conflict: false,
+      lowConfidence: false,
+    }
+  }
+
+  if (tesseractValue && tesseractConfidence >= TESSERACT_ID_MIN_CONFIDENCE) {
+    return {
+      value: tesseractValue,
+      confidence: tesseractConfidence,
+      source: 'TESSERACT',
+      conflict: false,
+      lowConfidence: false,
+    }
+  }
+
+  return {
+    value: null,
+    confidence: Math.max(tesseractConfidence, paddleConfidence) || null,
+    source: null,
+    conflict: false,
+    lowConfidence: Boolean(tesseractValue || paddleValue),
+  }
 }
 
 export async function analyzeDocumentsWithLocalOcr(
@@ -157,7 +256,9 @@ export async function analyzeDocumentsWithLocalOcr(
         const result = await worker.recognize(oriented.canvas)
         const confidence = Number.isFinite(result.data.confidence) ? result.data.confidence : 0
         const fields = extractOcrFields(result.data.text)
-        const calibrated = await extractCalibratedFields(worker, oriented.canvas, fields.kind)
+        const headerKind = classifyKnownHeader(oriented.headerText)
+        const kind = current.kind ?? fields.kind ?? headerKind
+        const calibrated = await extractCalibratedFields(worker, oriented.canvas, kind)
         const calibratedConfidence = calibrated.fieldConfidence ?? {}
 
         const preferCalibrated = <T,>(
@@ -171,9 +272,63 @@ export async function analyzeDocumentsWithLocalOcr(
           return fallback
         }
 
+        let paddleValue: string | null = null
+        let paddleConfidence = 0
+        let paddleAvailable = true
+        let paddleError: string | undefined
+
+        if (current.prontuarioOcrSource !== 'MANUAL') {
+          const prontuarioRegion = getProntuarioRegion(oriented.canvas, kind)
+          if (prontuarioRegion) {
+            onProgress?.({
+              current: index + 1,
+              total: documents.length,
+              fileName: current.originalName,
+              status: 'Conferindo prontuário com OCR local aprimorado',
+            })
+            const paddle = await recognizeProntuarioWithPaddle(prontuarioRegion)
+            paddleValue = paddle.value
+            paddleConfidence = score01(paddle.confidence)
+            paddleAvailable = paddle.available
+            paddleError = paddle.error
+          }
+        }
+
+        const tesseractProntuario =
+          calibrated.prontuario ??
+          fields.prontuario ??
+          (current.prontuarioOcrSource === 'MANUAL' ? current.prontuario : null)
+        const tesseractConfidence = calibrated.prontuario
+          ? score01(calibratedConfidence.prontuario, true)
+          : 0
+
+        const identity = decideProntuario(
+          current,
+          tesseractProntuario ?? null,
+          tesseractConfidence,
+          paddleValue,
+          paddleConfidence,
+        )
+
+        const numeroDocumento = current.numeroDocumentoOcrSource === 'MANUAL'
+          ? current.numeroDocumento
+          : (
+              preferCalibrated(
+                calibrated.numeroDocumento,
+                calibratedConfidence.numeroDocumento,
+                fields.numeroDocumento ?? current.numeroDocumento,
+              ) ?? null
+            )
+        const documentDate = preferCalibrated(
+          calibrated.documentDate,
+          calibratedConfidence.documentDate,
+          fields.documentDate ?? current.documentDate,
+        ) ?? null
+
         const calibratedNeedsReview = [
-          [calibrated.prontuario, calibratedConfidence.prontuario, fields.prontuario],
-          [calibrated.numeroDocumento, calibratedConfidence.numeroDocumento, fields.numeroDocumento],
+          ...(current.numeroDocumentoOcrSource === 'MANUAL'
+            ? []
+            : [[calibrated.numeroDocumento, calibratedConfidence.numeroDocumento, fields.numeroDocumento]]),
           [calibrated.documentDate, calibratedConfidence.documentDate, fields.documentDate],
         ].some(([value, valueConfidence, fallback]) =>
           value != null &&
@@ -186,22 +341,23 @@ export async function analyzeDocumentsWithLocalOcr(
 
         const next: AnalyzedDocument = {
           ...current,
-          kind: fields.kind ?? current.kind,
-          prontuario: preferCalibrated(
-            calibrated.prontuario,
-            calibratedConfidence.prontuario,
-            fields.prontuario ?? current.prontuario,
-          ) ?? null,
-          numeroDocumento: preferCalibrated(
-            calibrated.numeroDocumento,
-            calibratedConfidence.numeroDocumento,
-            fields.numeroDocumento ?? current.numeroDocumento,
-          ) ?? null,
-          documentDate: preferCalibrated(
-            calibrated.documentDate,
-            calibratedConfidence.documentDate,
-            fields.documentDate ?? current.documentDate,
-          ) ?? null,
+          kind,
+          prontuario: identity.value,
+          prontuarioConfidence: identity.confidence,
+          prontuarioOcrSource: identity.source,
+          numeroDocumento,
+          numeroDocumentoConfidence: current.numeroDocumentoOcrSource === 'MANUAL' && numeroDocumento
+            ? 1
+            : numeroDocumento && calibrated.numeroDocumento === numeroDocumento
+              ? score01(calibratedConfidence.numeroDocumento, true)
+              : null,
+          numeroDocumentoOcrSource: current.numeroDocumentoOcrSource === 'MANUAL' && numeroDocumento
+            ? 'MANUAL'
+            : numeroDocumento && calibrated.numeroDocumento === numeroDocumento
+              ? 'TESSERACT'
+              : null,
+          manualReviewApproved: false,
+          documentDate,
           caseMode: calibrated.caseMode ?? fields.caseMode ?? current.caseMode,
           isMonthly: fields.isMonthly || current.isMonthly,
           confidence: confidence / 100,
@@ -212,7 +368,10 @@ export async function analyzeDocumentsWithLocalOcr(
               item.id !== 'ocr-field-confidence' &&
               item.id !== 'ocr-error' &&
               item.id !== 'ocr-orientation' &&
-              item.id !== 'ocr-orientation-pdf',
+              item.id !== 'ocr-orientation-pdf' &&
+              item.id !== 'ocr-prontuario-conflict' &&
+              item.id !== 'ocr-identity-confidence' &&
+              item.id !== 'ocr-paddle-unavailable',
           ),
         }
 
@@ -233,6 +392,50 @@ export async function analyzeDocumentsWithLocalOcr(
           ]
         }
 
+        if (identity.conflict) {
+          next.validations = [
+            ...next.validations,
+            {
+              id: 'ocr-prontuario-conflict',
+              label: 'Prontuário — divergência entre leitores',
+              value: null,
+              status: 'REVISAR',
+              note: 'Tesseract e PaddleOCR produziram prontuários diferentes. O sistema descartou ambos para evitar renomeação incorreta.',
+            },
+          ]
+          next.reviewStatus = 'REVISAR'
+        } else if (!identity.value && (identity.lowConfidence || kind !== null)) {
+          next.validations = [
+            ...next.validations,
+            {
+              id: 'ocr-identity-confidence',
+              label: 'Confiança do prontuário',
+              value: identity.confidence == null
+                ? null
+                : Math.round(identity.confidence * 100) + '%',
+              status: 'REVISAR',
+              note: 'Nenhuma leitura do prontuário atingiu o limiar seguro. Informe o número manualmente.',
+            },
+          ]
+          next.reviewStatus = 'REVISAR'
+        }
+
+        if (!paddleAvailable && !identity.value) {
+          next.validations = [
+            ...next.validations,
+            {
+              id: 'ocr-paddle-unavailable',
+              label: 'OCR local aprimorado',
+              value: 'Indisponível',
+              status: 'REVISAR',
+              note: paddleError
+                ? 'A segunda leitura local não pôde ser inicializada: ' + paddleError
+                : 'A segunda leitura local não pôde ser inicializada.',
+            },
+          ]
+          next.reviewStatus = 'REVISAR'
+        }
+
         if (calibratedNeedsReview) {
           next.validations = [
             ...next.validations,
@@ -247,7 +450,7 @@ export async function analyzeDocumentsWithLocalOcr(
           next.reviewStatus = 'REVISAR'
         }
 
-        if (confidence < OCR_MIN_CONFIDENCE || !fields.kind) {
+        if (confidence < OCR_MIN_CONFIDENCE || !kind) {
           next.validations = [
             ...next.validations,
             {
@@ -255,9 +458,9 @@ export async function analyzeDocumentsWithLocalOcr(
               label: 'Confiança da leitura automática',
               value: Math.round(confidence) + '%',
               status: 'REVISAR',
-              note: !fields.kind
+              note: !kind
                 ? 'O tipo documental não foi classificado com segurança.'
-                : 'A confiança global do OCR ficou abaixo do limiar automático.',
+                : 'A confiança global do texto ficou baixa; os identificadores usam confiança própria e segunda leitura quando disponível.',
             },
           ]
           next.reviewStatus = 'REVISAR'
@@ -268,6 +471,7 @@ export async function analyzeDocumentsWithLocalOcr(
         analyzed.push({
           ...current,
           confidence: null,
+          manualReviewApproved: false,
           reviewStatus: 'REVISAR',
           validations: [
             ...current.validations.filter((item) => item.id !== 'ocr-error'),

@@ -33,12 +33,19 @@ function isNotFound(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'NotFoundError'
 }
 
-async function fileExists(directory: DirectoryHandleLike, name: string): Promise<boolean> {
+async function fileExists(
+  directory: DirectoryHandleLike,
+  name: string,
+  excludeExactName?: string,
+): Promise<boolean> {
   const expected = name.toLocaleLowerCase('pt-BR')
   for await (const rawEntry of directory.values()) {
     const entry = rawEntry as { name?: string }
-    if (entry.name?.toLocaleLowerCase('pt-BR') === expected) return true
+    if (!entry.name || entry.name === excludeExactName) continue
+    if (entry.name.toLocaleLowerCase('pt-BR') === expected) return true
   }
+
+  if (excludeExactName) return false
 
   try {
     await directory.getFileHandle(name)
@@ -133,11 +140,14 @@ async function renameOne(
   if ((requireOk && document.reviewStatus !== 'OK') || !target) {
     return { id: document.id, from: document.originalName, to: target ?? '', status: 'IGNORADO' }
   }
-  if (document.originalName.localeCompare(target, undefined, { sensitivity: 'accent' }) === 0) {
+  if (document.originalName === target) {
     return { id: document.id, from: document.originalName, to: target, status: 'IGNORADO' }
   }
 
-  if (await fileExists(directory, target)) {
+  const caseOnlyChange =
+    document.originalName.toLocaleLowerCase('pt-BR') === target.toLocaleLowerCase('pt-BR')
+
+  if (await fileExists(directory, target, caseOnlyChange ? document.originalName : undefined)) {
     return {
       id: document.id,
       from: document.originalName,
@@ -163,6 +173,9 @@ async function renameOne(
   const tempName = '.renomear-' + crypto.randomUUID() + '.tmp'
   let tempHandle: FileHandleLike | null = null
   let writable: WritableLike | null = null
+  let sourceMovedAside = false
+  let targetPromoted = false
+  const sourceBackupName = '.renomear-source-' + crypto.randomUUID() + '.bak'
 
   try {
     tempHandle = await directory.getFileHandle(tempName, { create: true })
@@ -182,14 +195,27 @@ async function renameOne(
       )
     }
 
-    // O destino nunca é aberto para escrita. A promoção do arquivo temporário usa
-    // uma operação de move do próprio handle, evitando sobrescrever silenciosamente
-    // um arquivo que apareça entre a checagem e a gravação.
+    // Em troca apenas de caixa (ex.: _dt -> _DT), sistemas de arquivos
+    // case-insensitive consideram origem e destino o mesmo nome. Movemos a origem
+    // para um backup temporário somente depois que a nova cópia foi criada e verificada.
+    if (caseOnlyChange) {
+      if (typeof sourceHandle.move !== 'function') {
+        throw new Error(
+          'Este navegador não oferece renomeação segura para ajustar maiúsculas/minúsculas.',
+        )
+      }
+      await sourceHandle.move(sourceBackupName)
+      sourceMovedAside = true
+    }
+
+    // O destino nunca é aberto para escrita. A promoção usa move() do próprio
+    // handle temporário, evitando sobrescrever silenciosamente outro arquivo.
     if (await fileExists(directory, target)) {
       throw new Error('O nome de destino passou a existir durante a operação.')
     }
 
     await tempHandle.move(target)
+    targetPromoted = true
     tempHandle = null
 
     const writtenHandle = await directory.getFileHandle(target)
@@ -200,9 +226,32 @@ async function renameOne(
       )
     }
 
-    await directory.removeEntry(document.originalName)
+    if (sourceMovedAside) {
+      await directory.removeEntry(sourceBackupName)
+      sourceMovedAside = false
+    } else {
+      await directory.removeEntry(document.originalName)
+    }
     return { id: document.id, from: document.originalName, to: target, status: 'RENOMEADO' }
   } catch (error) {
+    if (targetPromoted && sourceMovedAside) {
+      try {
+        await directory.removeEntry(target)
+        targetPromoted = false
+      } catch {
+        // Melhor esforço: o backup da origem continua preservado.
+      }
+    }
+
+    if (sourceMovedAside) {
+      try {
+        await sourceHandle.move?.(document.originalName)
+        sourceMovedAside = false
+      } catch {
+        // Se o rollback falhar, a origem continua preservada no backup temporário.
+      }
+    }
+
     if (writable?.abort) {
       try {
         await writable.abort()

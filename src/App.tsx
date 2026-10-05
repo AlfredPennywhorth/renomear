@@ -6,7 +6,7 @@ import QualityDashboard from './components/QualityDashboard'
 import SecurityNotice from './components/SecurityNotice'
 import type { AnalyzedDocument } from './domain/document'
 import { listSupportedDocuments } from './services/local-files'
-import { analyzeBatch, isAutomaticRenameReady, reconcileReviewStatus, summarizeBatch } from './services/batch-processing'
+import { analyzeBatch, isAutomaticRenameReady, isRenameReady, reconcileReviewStatus, summarizeBatch } from './services/batch-processing'
 import { analyzeDocumentsWithLocalOcr } from './services/local-ocr'
 import { applyCrossDocumentValidations } from './services/cross-document-validation'
 import { collectInconsistencies, downloadInconsistencyCsv } from './services/inconsistency-report'
@@ -149,6 +149,15 @@ function App() {
             return {
               ...document,
               originalName: result.to,
+              rotationDegrees: 0 as const,
+              validations: document.validations.map((item) =>
+                item.id === 'ocr-orientation'
+                  ? {
+                      ...item,
+                      note: 'A orientação detectada foi aplicada fisicamente durante a renomeação.',
+                    }
+                  : item,
+              ),
               renameState: 'RENOMEADO' as const,
               lastRenameError: null,
             }
@@ -182,13 +191,13 @@ function App() {
   const renameApproved = async () => {
     if (!directory) return
     const candidates = documents.filter((document) =>
-      document.reviewStatus === 'OK' &&
+      isRenameReady(document) &&
       document.suggestedName &&
       document.originalName !== document.suggestedName
     )
 
     if (candidates.length === 0) {
-      setMessage('Não há documentos aprovados aguardando renomeação.')
+      setMessage('Não há documentos prontos aguardando renomeação.')
       return
     }
 
@@ -198,7 +207,7 @@ function App() {
         duplicateNames.has(document.suggestedName.toLocaleLowerCase('pt-BR')),
     )
     if (duplicateApproved.length > 0) {
-      setMessage('Há nomes propostos duplicados entre os documentos aprovados. Corrija-os antes de renomear.')
+      setMessage('Há nomes propostos duplicados entre os documentos prontos. Corrija-os antes de renomear.')
       return
     }
 
@@ -210,7 +219,7 @@ function App() {
 
     try {
       setRenameBusy(true)
-      const results = await renameApprovedDocuments(directory, batchCandidates)
+      const results = await renameApprovedDocuments(directory, batchCandidates, { requireOk: false })
       const byId = new Map(results.map((result) => [result.id, result]))
 
       setDocuments((current) => current.map((document) => {
@@ -220,6 +229,15 @@ function App() {
           return {
             ...document,
             originalName: result.to,
+            rotationDegrees: 0 as const,
+            validations: document.validations.map((item) =>
+              item.id === 'ocr-orientation'
+                ? {
+                    ...item,
+                    note: 'A orientação detectada foi aplicada fisicamente durante a renomeação.',
+                  }
+                : item,
+            ),
             renameState: 'RENOMEADO' as const,
             lastRenameError: null,
           }
@@ -300,7 +318,7 @@ function App() {
             {directory && (
               <>
                 <button type="button" className="secondary-button" onClick={renameApproved} disabled={renameBusy || processingBusy}>
-                  {renameBusy ? 'Renomeando…' : 'Renomear aprovados'}
+                  {renameBusy ? 'Renomeando…' : 'Renomear prontos'}
                 </button>
                 <button type="button" onClick={processBatch} disabled={processingBusy || renameBusy || documents.length === 0}>
                   {processingBusy ? 'Processando lote…' : 'Processar lote'}
@@ -372,7 +390,7 @@ function App() {
                         {!document.renameState && '—'}
                       </td>
                       <td className="row-actions">
-                        {directory && document.renameState !== 'RENOMEADO' && (
+                        {directory && (
                           <button className="table-action" type="button" onClick={() => setSelectedId(document.id)}>
                             Revisar
                           </button>
