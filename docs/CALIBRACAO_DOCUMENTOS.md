@@ -320,11 +320,11 @@ Também há orientação para o preenchimento do campo de identificação do ate
 A imagem registra que:
 
 - nem todos os casos terão DT;
-- nos atendimentos de emergência, não haverá assinatura no envelope; a assinatura ocorre no recibo de emergência;
+- nos atendimentos de emergência, a assinatura pode estar no recibo manual; quando o envelope não estiver assinado, deve conter o carimbo **ASSINATURA DO ATENDIDO NO RECIBO**;
 - quando não houver assinatura do necessitado, mas existir comprovante dentro do envelope no mesmo valor ou superior ao atendimento, aplicar o carimbo **COMPROVANTE DENTRO DO ENVELOPE** e digitalizar o comprovante;
 - quando o valor for entregue em dinheiro no dia da reunião, aplicar o carimbo **DINHEIRO $$$**.
 
-Também aparece o carimbo **ASSINATURA DO ATENDIDO NO RECIBO** para os casos de emergência.
+O carimbo **ASSINATURA DO ATENDIDO NO RECIBO** é obrigatório no envelope de emergência sem assinatura, conforme esclarecimento do responsável pelo projeto em 05/10/2026. A presença do recibo manual assinado não dispensa esse carimbo; a assinatura do recibo deve ser conferida separadamente.
 
 ### Dupla conferência
 
@@ -397,7 +397,7 @@ Validação esperada:
 - data C1 emergência = data do recibo manual;
 - data C1 emergência < Data da Reunião do envelope/recibo;
 - envelope/recibo deve apresentar indicação de emergência;
-- ausência da assinatura no envelope é aceitável quando houver recibo manual assinado e/ou carimbo institucional correspondente;
+- envelope é obrigatório; quando estiver sem assinatura, exigir o carimbo **ASSINATURA DO ATENDIDO NO RECIBO**. O recibo manual assinado não substitui a exigência do carimbo no envelope; conferir separadamente a assinatura do recibo. Ausência confirmada de assinatura e carimbo no envelope é não conformidade; evidência visual inconclusiva permanece em REVISAR;
 - se o recibo manual não trouxer prontuário, não associá-lo automaticamente apenas por proximidade dos arquivos.
 
 ### Associação do recibo manual sem prontuário

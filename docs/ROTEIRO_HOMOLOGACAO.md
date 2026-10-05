@@ -372,7 +372,7 @@ Esta rodada deve usar **somente cópias dos documentos**, nunca os arquivos orig
 ### H-SIGN-03 — Emergência
 
 **Esperado**
-- Ausência de assinatura no envelope não deve ser tratada como erro quando a regra indicar que a assinatura fica no recibo de emergência.
+- Envelope é obrigatório. Se não estiver assinado, deve conter o carimbo **ASSINATURA DO ATENDIDO NO RECIBO**, mesmo quando o recibo manual assinado estiver disponível. Conferir a assinatura do recibo separadamente. Ausência confirmada de assinatura e carimbo no envelope é não conformidade; evidência inconclusiva permanece em REVISAR. Regra esclarecida pelo responsável pelo projeto em 05/10/2026.
 
 ---
 
