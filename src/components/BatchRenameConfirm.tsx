@@ -4,11 +4,12 @@ import type { AnalyzedDocument } from '../domain/document'
 type Props = {
   documents: AnalyzedDocument[]
   busy: boolean
+  error?: string | null
   onCancel: () => void
   onConfirm: () => void
 }
 
-function BatchRenameConfirm({ documents, busy, onCancel, onConfirm }: Props) {
+function BatchRenameConfirm({ documents, busy, error, onCancel, onConfirm }: Props) {
   const dialogRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
@@ -49,6 +50,8 @@ function BatchRenameConfirm({ documents, busy, onCancel, onConfirm }: Props) {
       <div className="batch-warning">
         O Renomear verificará conflitos novamente antes de cada alteração, validará a integridade da cópia e só então removerá o nome original.
       </div>
+
+      {error && <p className="batch-warning" role="alert">{error}</p>}
 
       <footer>
         <button type="button" className="secondary-button" onClick={onCancel} disabled={busy}>Cancelar</button>
