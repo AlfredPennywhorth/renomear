@@ -23,6 +23,7 @@ function App() {
   const [message, setMessage] = useState('Nenhuma pasta selecionada.')
   const [busy, setBusy] = useState(false)
   const [renameBusy, setRenameBusy] = useState(false)
+  const [renameError, setRenameError] = useState<string | null>(null)
   const [processingBusy, setProcessingBusy] = useState(false)
   const [securityAccepted, setSecurityAccepted] = useState(false)
   const [batchCandidates, setBatchCandidates] = useState<AnalyzedDocument[]>([])
@@ -133,6 +134,7 @@ function App() {
       })
 
       setDocuments(analyzed)
+      setRenameError(null)
       setBatchCandidates(automaticCandidates)
       setMessage(
         String(summary.total) + ' analisado(s): ' +
@@ -170,6 +172,7 @@ function App() {
       return
     }
 
+    setRenameError(null)
     setBatchCandidates(candidates)
   }
 
@@ -177,6 +180,7 @@ function App() {
     if (!directory || batchCandidates.length === 0) return
 
     try {
+      setRenameError(null)
       setRenameBusy(true)
       const results = await renameApprovedDocuments(directory, batchCandidates, { requireOk: false })
       const byId = new Map(results.map((result) => [result.id, result]))
@@ -217,6 +221,12 @@ function App() {
         ? String(renamed) + ' arquivo(s) renomeado(s); ' + String(errors) + ' requer(em) revisão.'
         : String(renamed) + ' arquivo(s) renomeado(s) com sucesso.')
       setBatchCandidates([])
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Falha inesperada ao acessar a pasta.'
+      const feedback = 'Não foi possível concluir a renomeação: ' + detail +
+        ' Verifique a permissão de escrita da pasta e tente novamente. Se persistir, cancele e selecione a pasta novamente.'
+      setRenameError(feedback)
+      setMessage(feedback)
     } finally {
       setRenameBusy(false)
     }
@@ -398,6 +408,7 @@ function App() {
           <BatchRenameConfirm
             documents={batchCandidates}
             busy={renameBusy}
+            error={renameError}
             onCancel={() => setBatchCandidates([])}
             onConfirm={confirmRenameApproved}
           />
