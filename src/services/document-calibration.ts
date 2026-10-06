@@ -132,19 +132,22 @@ export type OcrLayout = { blocks?: Array<{ paragraphs: Array<{ lines: Array<{ wo
 
 export function findLabeledProntuarioBox(layout: OcrLayout): OcrWordBox['bbox'] | 'AMBIGUOUS' | null {
   const boxes: OcrWordBox['bbox'][] = []
+  let labelCount = 0
   for (const block of layout.blocks ?? []) {
     for (const paragraph of block.paragraphs) {
       for (const line of paragraph.lines) {
-        const index = line.words.findIndex(word => /^PRONT(?:UARIO|\.)[:]?$/u.test(normalizeText(word.text).trim()))
-        if (index < 0) continue
-        const following = line.words.slice(index + 1)
-        const candidate = following.find(word => !/^(?:N[Oº°]?\.?|[:#-])$/u.test(normalizeText(word.text).trim()))
-        if (candidate && /^\d{1,6}$/.test(candidate.text.trim())) boxes.push(candidate.bbox)
+        for (let index = 0; index < line.words.length; index++) {
+          if (!/^PRONT(?:UARIO|\.)[:]?$/u.test(normalizeText(line.words[index].text).trim())) continue
+          labelCount++
+          const following = line.words.slice(index + 1)
+          const candidate = following.find(word => !/^(?:N[Oº°]?\.?[:#-]?|[:#-])$/u.test(normalizeText(word.text).trim()))
+          if (candidate && /^\d{1,6}$/.test(candidate.text.trim())) boxes.push(candidate.bbox)
+        }
       }
     }
   }
-  // Multiple labeled occurrences require human review instead of choosing one arbitrarily.
-  return boxes.length > 1 ? 'AMBIGUOUS' : boxes[0] ?? null
+  // Count labels even when the associated number is unreadable.
+  return labelCount > 1 ? 'AMBIGUOUS' : boxes[0] ?? null
 }
 
 export function getProntuarioRegion(
