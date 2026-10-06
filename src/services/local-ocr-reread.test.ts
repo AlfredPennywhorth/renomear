@@ -20,6 +20,7 @@ vi.mock('./document-calibration', () => ({
   getProntuarioRegion: () => null,
   findLabeledProntuarioBox: () => null,
 }))
+import { analyzeBatch, isAutomaticRenameReady, isRenameReady } from './batch-processing'
 import { analyzeDocumentsWithLocalOcr } from './local-ocr'
 
 afterEach(() => vi.unstubAllGlobals())
@@ -48,4 +49,48 @@ it.each([true, false])('relê no ângulo escolhido e preserva apenas sequência 
   expect(result.documentDate).toBe('01/01/2026')
   expect(result.manualReviewApproved).toBe(false)
   expect(result.validations.some(v => v.id === 'manual-orientation-review')).toBe(true)
+})
+
+
+it('mantém bloqueio de revisão após reler na orientação atual até aprovação explícita', async () => {
+  mocks.sequence = '000888'
+  mocks.rotate.mockReturnValue(mocks.rotated)
+  const bitmap = { width: 20, height: 30, close: vi.fn() }
+  vi.stubGlobal('createImageBitmap', async () => bitmap)
+  vi.stubGlobal('document', { createElement: () => ({ getContext: () => ({ fillRect() {}, drawImage() {} }) }) })
+
+  const source: AnalyzedDocument = {
+    id: '2', originalName: 'scan.jpg', kind: 'DECLARACAO_TRANSITO',
+    prontuario: '000123', prontuarioOcrSource: 'MANUAL', prontuarioConfidence: 1,
+    numeroDocumento: '000456', numeroDocumentoOcrSource: 'MANUAL', numeroDocumentoConfidence: 1,
+    documentDate: '01/01/2026', documentDateOcrSource: 'MANUAL', caseMode: null, isMonthly: false,
+    suggestedName: '000123_000456_DT.jpg', confidence: 1, rotationDegrees: 0,
+    reviewStatus: 'REVISAR', manualReviewApproved: false,
+    validations: [{
+      id: 'ocr-orientation-uncertain',
+      label: 'Orientação do arquivo',
+      value: null,
+      status: 'REVISAR',
+    }],
+  }
+
+  const directory = {
+    getFileHandle: async () => ({
+      getFile: async () => ({ name: 'scan.jpg', type: 'image/jpeg', size: 10 }),
+    }),
+  }
+
+  const [reread] = await analyzeDocumentsWithLocalOcr(
+    directory as never,
+    [source],
+    undefined,
+    { useCurrentOrientation: true },
+  )
+  const [reanalyzed] = analyzeBatch([reread])
+
+  expect(reread.manualReviewApproved).toBe(false)
+  expect(reread.validations.some((v) => v.id === 'manual-orientation-review' && v.status === 'REVISAR')).toBe(true)
+  expect(reanalyzed.reviewStatus).toBe('REVISAR')
+  expect(isAutomaticRenameReady(reanalyzed)).toBe(false)
+  expect(isRenameReady(reanalyzed)).toBe(false)
 })
