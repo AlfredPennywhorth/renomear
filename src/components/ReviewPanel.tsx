@@ -320,6 +320,7 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
                 <div>
                   <strong>{item.label}</strong>
                   <span>{item.value ?? 'Não identificado'}</span>
+                  {item.note && <small>{item.note}</small>}
                 </div>
                 <span className={`badge ${item.status.toLowerCase().replace('_', '-')}`}>{item.status}</span>
               </li>
