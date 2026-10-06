@@ -368,7 +368,7 @@ export async function extractCalibratedFields(
         : null,
       caseMode: detectC1CaseMode(canvas),
       fieldConfidence: {
-        prontuario: prontuarioCandidate.confidence,
+        prontuario: prontuarioResult.data.confidence,
         documentDate: dateResult.data.confidence,
       },
     }
@@ -430,7 +430,7 @@ export async function extractCalibratedFields(
       documentDate: dateFromText(dateResult.data.text),
       prontuario: prontuarioCandidate.value,
       fieldConfidence: {
-        prontuario: prontuarioResult.data.confidence,
+        prontuario: prontuarioCandidate.confidence,
         documentDate: dateResult.data.confidence,
         numeroDocumento: numeroCandidate.confidence,
       },
