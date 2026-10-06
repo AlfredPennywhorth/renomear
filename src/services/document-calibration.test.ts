@@ -122,3 +122,15 @@ describe('rótulos impressos', () => {
     }
   })
 })
+
+
+it('bloqueia rótulos duplicados mesmo com números ilegíveis e aceita Nº:', () => {
+  const bbox = { x0: 0, y0: 0, x1: 20, y1: 20 }
+  const line = (texts: string[]) => ({ words: texts.map(text => ({ text, bbox })) })
+  const layout = (lines: ReturnType<typeof line>[]) => ({ blocks: [{ paragraphs: [{ lines }] }] })
+  expect(findLabeledProntuarioBox(layout([line(['Prontuário', 'Nº:', '000123'])]))).toEqual(bbox)
+  for (const digits of ['000123', 'ilegível']) {
+    expect(findLabeledProntuarioBox(layout([line(['Prontuário', digits]), line(['Prontuário', 'ilegível'])]))).toBe('AMBIGUOUS')
+  }
+  expect(findLabeledProntuarioBox(layout([line(['Prontuário', '000123', 'Prontuário', 'ilegível'])]))).toBe('AMBIGUOUS')
+})
