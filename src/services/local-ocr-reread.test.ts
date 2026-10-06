@@ -17,6 +17,7 @@ vi.mock('./document-calibration', () => ({
   rotateCanvas: mocks.rotate,
   extractCalibratedFields: async () => ({ prontuario: '000999', numeroDocumento: '000888' }),
   getProntuarioRegion: () => null,
+  findLabeledProntuarioBox: () => null,
 }))
 import { analyzeDocumentsWithLocalOcr } from './local-ocr'
 
@@ -30,7 +31,7 @@ it('relê no ângulo escolhido preservando identidade, sequência e data conferi
     id: '1', originalName: 'scan.jpg', kind: 'DECLARACAO_TRANSITO',
     prontuario: '000123', prontuarioOcrSource: 'MANUAL', prontuarioConfidence: 1,
     numeroDocumento: '000456', numeroDocumentoOcrSource: 'MANUAL', numeroDocumentoConfidence: 1,
-    documentDate: '01/01/2026', caseMode: null, isMonthly: false,
+    documentDate: '01/01/2026', documentDateOcrSource: 'MANUAL', caseMode: null, isMonthly: false,
     suggestedName: '000123_000456_DT.jpg', confidence: 1, rotationDegrees: 90,
     reviewStatus: 'REVISAR', manualReviewApproved: false,
     validations: [{ id: 'manual-orientation-review', label: '', value: null, status: 'REVISAR' }],
