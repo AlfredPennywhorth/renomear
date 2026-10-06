@@ -48,6 +48,9 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
   }, [document.id, document.documentDate])
   const update = (patch: Partial<AnalyzedDocument>) => {
     const next = { ...document, ...patch }
+    if ('documentDate' in patch && patch.documentDate !== document.documentDate) next.documentDateOcrSource = 'MANUAL'
+    if ('caseMode' in patch && patch.caseMode !== document.caseMode) next.caseModeOcrSource = 'MANUAL'
+    if ('isMonthly' in patch && patch.isMonthly !== document.isMonthly) next.isMonthlyOcrSource = 'MANUAL' 
     const editableFields = new Set([
       'kind',
       'prontuario',
@@ -84,6 +87,7 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
       validations: normalized
         ? document.validations.filter(
             (item) =>
+              item.id !== 'ocr-prontuario-ambiguous' &&
               item.id !== 'ocr-prontuario-conflict' &&
               item.id !== 'ocr-identity-confidence' &&
               item.id !== 'ocr-paddle-unavailable',
@@ -119,7 +123,8 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
             item.id !== 'manual-orientation-review' &&
             item.id !== 'ocr-confidence' &&
             item.id !== 'ocr-field-confidence' &&
-            item.id !== 'ocr-prontuario-conflict' &&
+            item.id !== 'ocr-prontuario-ambiguous' &&
+              item.id !== 'ocr-prontuario-conflict' &&
             item.id !== 'ocr-identity-confidence' &&
             item.id !== 'ocr-paddle-unavailable' &&
             item.id !== 'ocr-error',
