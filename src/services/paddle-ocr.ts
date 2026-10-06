@@ -3,7 +3,7 @@ import { normalizeProntuario } from '../domain/prontuario'
 const PADDLE_SDK_URL =
   'https://cdn.jsdelivr.net/npm/@paddleocr/paddleocr-js@0.4.2/+esm'
 const ORT_WASM_URL =
-  'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/'
+  'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.26.0/dist/'
 
 type PaddleItem = {
   text?: unknown
