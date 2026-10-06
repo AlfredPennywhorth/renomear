@@ -32,6 +32,9 @@ export interface AnalyzedDocument {
   prontuario: string | null
   numeroDocumento: string | null
   documentDate: string | null
+  documentDateOcrSource?: 'MANUAL' | 'TESSERACT' | null
+  caseModeOcrSource?: 'MANUAL' | 'TESSERACT' | null
+  isMonthlyOcrSource?: 'MANUAL' | 'TESSERACT' | null
   receiptDate?: string | null
   signatureDate?: string | null
   caseMode: CaseMode | null
