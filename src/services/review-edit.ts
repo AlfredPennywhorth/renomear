@@ -29,3 +29,26 @@ export function shouldInvalidateRenameState(
 
   return document.renameState === 'RENOMEADO' || document.renameState === 'ERRO'
 }
+
+export function rotateDocumentManually(
+  document: AnalyzedDocument,
+  direction: 'LEFT' | 'RIGHT',
+): AnalyzedDocument {
+  const rotation = (((document.rotationDegrees ?? 0) + (direction === 'RIGHT' ? 90 : 270)) % 360) as 0 | 90 | 180 | 270
+  return {
+    ...document,
+    rotationDegrees: rotation,
+    manualReviewApproved: false,
+    reviewStatus: document.reviewStatus === 'NAO_CONFORME' ? 'NAO_CONFORME' : 'REVISAR',
+    renameState: 'NAO_RENOMEADO',
+    lastRenameError: null,
+    validations: [
+      ...document.validations.filter(item => item.id !== 'ocr-orientation' && item.id !== 'ocr-orientation-uncertain'),
+      {
+        id: 'ocr-orientation', label: 'Orientação ajustada manualmente',
+        value: rotation + '°', status: 'OK',
+        note: 'Confira os campos após o giro. A imagem será gravada nesta orientação após confirmar a renomeação.',
+      },
+    ],
+  }
+}
