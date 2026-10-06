@@ -96,6 +96,20 @@ function App() {
     })
   }
 
+  const rereadSelected = async () => {
+    if (!directory || !selectedDocument || processingBusy) return
+    setProcessingBusy(true)
+    try {
+      const [read] = await analyzeDocumentsWithLocalOcr(directory, [selectedDocument], undefined, { useCurrentOrientation: true })
+      if (read) updateDocument(analyzeBatch([read])[0])
+      setMessage('Documento relido na orientação escolhida. Confira os campos e aprove a revisão.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Falha na releitura local.')
+    } finally {
+      setProcessingBusy(false)
+    }
+  }
+
   const processBatch = async () => {
     if (!directory || documents.length === 0) {
       setMessage('Selecione uma pasta com documentos antes de processar o lote.')
@@ -395,6 +409,8 @@ function App() {
             document={selectedDocument}
             onClose={() => setSelectedId(null)}
             onChange={updateDocument}
+            onReread={rereadSelected}
+            rereading={processingBusy}
           />
         </>
       )}
