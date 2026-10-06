@@ -295,6 +295,7 @@ export async function analyzeDocumentsWithLocalOcr(
               item.id !== 'ocr-confidence' &&
               item.id !== 'ocr-field-confidence' &&
               item.id !== 'ocr-error' &&
+              item.id !== 'ocr-orientation-uncertain' &&
               item.id !== 'ocr-orientation' &&
               item.id !== 'ocr-orientation-pdf' &&
               item.id !== 'ocr-prontuario-conflict' &&
@@ -304,6 +305,17 @@ export async function analyzeDocumentsWithLocalOcr(
         }
 
         next.suggestedName = suggestFileName(next)
+
+        if (!oriented.certain) {
+          next.validations.push({
+            id: 'ocr-orientation-uncertain',
+            label: 'Orientação do arquivo',
+            value: null,
+            status: 'REVISAR',
+            note: 'Não foi possível determinar a orientação com segurança nos quatro ângulos. Confira a imagem e os campos antes de aprovar.',
+          })
+          next.reviewStatus = 'REVISAR'
+        }
 
         if (oriented.rotation !== 0) {
           next.validations = [

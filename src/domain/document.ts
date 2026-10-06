@@ -47,6 +47,13 @@ export interface AnalyzedDocument {
   prontuarioOcrSource?: 'TESSERACT' | 'PADDLE' | 'CONSENSUS' | 'MANUAL' | null
   numeroDocumentoOcrSource?: 'TESSERACT' | 'MANUAL' | null
   manualReviewApproved?: boolean
+  rotationEditBaseline?: {
+    rotationDegrees: 0 | 90 | 180 | 270
+    originalName: string
+    suggestedName: string | null
+    renameState?: RenameState
+    lastRenameError?: string | null
+  }
   rotationDegrees?: 0 | 90 | 180 | 270
   reviewStatus: ReviewStatus
   validations: DocumentValidation[]

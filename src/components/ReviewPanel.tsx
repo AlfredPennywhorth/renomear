@@ -115,6 +115,8 @@ function ReviewPanel({ document, onClose, onChange, embedded = false }: Props) {
         validations: document.validations.filter(
           (item) =>
             item.id !== 'automation-rule-coverage' &&
+            item.id !== 'ocr-orientation-uncertain' &&
+            item.id !== 'manual-orientation-review' &&
             item.id !== 'ocr-confidence' &&
             item.id !== 'ocr-field-confidence' &&
             item.id !== 'ocr-prontuario-conflict' &&

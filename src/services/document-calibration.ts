@@ -157,6 +157,21 @@ async function recognize(
   return worker.recognize(canvas)
 }
 
+export type OrientationCandidate = {
+  rotation: 0 | 90 | 180 | 270
+  score: number
+  headerText: string
+}
+
+// A generic institutional heading alone does not establish the reading direction.
+export function chooseDocumentOrientation(candidates: OrientationCandidate[]): OrientationCandidate | null {
+  const ranked = [...candidates].sort((a, b) => b.score - a.score)
+  const best = ranked[0]
+  if (!best || best.score < 7 || !classifyKnownHeader(best.headerText)) return null
+  if (ranked[1] && best.score - ranked[1].score < 2) return null
+  return best
+}
+
 export async function detectDocumentOrientation(
   worker: Worker,
   source: HTMLCanvasElement,
@@ -165,26 +180,32 @@ export async function detectDocumentOrientation(
   rotation: 0 | 90 | 180 | 270
   score: number
   headerText: string
+  certain: boolean
 }> {
-  const candidates: Array<0 | 90 | 180 | 270> = [0, 90, 180, 270]
-
-  let best = {
-    canvas: source,
-    rotation: 0 as 0 | 90 | 180 | 270,
-    score: -1,
-    headerText: '',
-  }
-
-  for (const rotation of candidates) {
+  const rotations: Array<0 | 90 | 180 | 270> = [0, 90, 180, 270]
+  const headers: OrientationCandidate[] = []
+  for (const rotation of rotations) {
     const canvas = rotateCanvas(source, rotation)
-    const header = cropCanvas(canvas, 0, 0, 1, 0.22)
-    const result = await recognize(worker, header, PSM.SPARSE_TEXT)
-    const headerText = result.data.text
-    const score = scoreKnownHeader(headerText)
-    if (score > best.score) best = { canvas, rotation, score, headerText }
+    const result = await recognize(worker, cropCanvas(canvas, 0, 0, 1, 0.22), PSM.SPARSE_TEXT)
+    headers.push({ rotation, score: scoreKnownHeader(result.data.text), headerText: result.data.text })
   }
 
-  return best
+  let selected = chooseDocumentOrientation(headers)
+  if (!selected) {
+    // Titles can fall outside the header on cropped A5 scans or scans with margins.
+    // Compare all angles over the same area rather than mixing header/page scores.
+    const pages: OrientationCandidate[] = []
+    for (const rotation of rotations) {
+      const result = await recognize(worker, rotateCanvas(source, rotation), PSM.SPARSE_TEXT)
+      pages.push({ rotation, score: scoreKnownHeader(result.data.text), headerText: result.data.text })
+    }
+    selected = chooseDocumentOrientation(pages)
+  }
+
+  if (!selected) {
+    return { canvas: source, rotation: 0, score: 0, headerText: '', certain: false }
+  }
+  return { ...selected, canvas: rotateCanvas(source, selected.rotation), certain: true }
 }
 
 function digitsOnly(value: string): string {

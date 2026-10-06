@@ -130,7 +130,7 @@ function App() {
       const automaticCandidates = analyzed.filter((document) => {
         if (!isAutomaticRenameReady(document) || !document.suggestedName) return false
         const key = document.suggestedName.toLocaleLowerCase('pt-BR')
-        return (nameCounts.get(key) ?? 0) === 1 && document.originalName !== document.suggestedName
+        return (nameCounts.get(key) ?? 0) === 1 && (document.originalName !== document.suggestedName || !!document.rotationDegrees)
       })
 
       setDocuments(analyzed)
@@ -154,7 +154,7 @@ function App() {
     const candidates = documents.filter((document) =>
       isRenameReady(document) &&
       document.suggestedName &&
-      document.originalName !== document.suggestedName
+      (document.originalName !== document.suggestedName || !!document.rotationDegrees)
     )
 
     if (candidates.length === 0) {
@@ -193,6 +193,7 @@ function App() {
             ...document,
             originalName: result.to,
             rotationDegrees: 0 as const,
+            rotationEditBaseline: undefined,
             validations: document.validations.map((item) =>
               item.id === 'ocr-orientation'
                 ? {

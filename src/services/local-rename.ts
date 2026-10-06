@@ -140,7 +140,7 @@ async function renameOne(
   if ((requireOk && document.reviewStatus !== 'OK') || !target) {
     return { id: document.id, from: document.originalName, to: target ?? '', status: 'IGNORADO' }
   }
-  if (document.originalName === target) {
+  if (document.originalName === target && !document.rotationDegrees) {
     return { id: document.id, from: document.originalName, to: target, status: 'IGNORADO' }
   }
 

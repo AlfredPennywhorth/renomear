@@ -1,3 +1,4 @@
+import { rotateDocumentManually } from './review-edit'
 import { describe, expect, it } from 'vitest'
 import type { AnalyzedDocument } from '../domain/document'
 import { analyzeBatch, isAutomaticRenameReady, isRenameReady, reconcileReviewStatus, summarizeBatch } from './batch-processing'
@@ -299,6 +300,17 @@ describe('analyzeBatch', () => {
   })
 
 
+  it('exige conferência quando a orientação é incerta apesar da identidade segura', () => {
+    const document = doc({
+      kind: 'DECLARACAO_TRANSITO', prontuario: '000123',
+      prontuarioConfidence: 1, prontuarioOcrSource: 'MANUAL',
+      numeroDocumento: '000456', numeroDocumentoConfidence: 1,
+      suggestedName: '000123_000456_DT.jpg', reviewStatus: 'OK',
+      validations: [{ id: 'ocr-orientation-uncertain', label: 'Orientação', value: null, status: 'REVISAR' }],
+    })
+    expect(isAutomaticRenameReady(document)).toBe(false)
+  })
+
   it.each(['ocr-empty-file', 'ocr-orientation-pdf'])(
     'bloqueia %s mesmo com identidade segura e aprovação manual anterior',
     (id) => {
@@ -337,4 +349,21 @@ describe('analyzeBatch', () => {
       naoConformes: 1,
     })
   })
+})
+
+
+it('exige aprovação humana após giro de DT com identidade segura', () => {
+  const original = doc({
+    kind: 'DECLARACAO_TRANSITO', prontuario: '000123',
+    prontuarioConfidence: 1, prontuarioOcrSource: 'MANUAL',
+    numeroDocumento: '000456', numeroDocumentoConfidence: 1,
+    suggestedName: '000123_000456_DT.jpg', reviewStatus: 'OK',
+    validations: [],
+  })
+  const rotated = rotateDocumentManually(original, 'RIGHT')
+  expect(isAutomaticRenameReady(rotated)).toBe(false)
+  expect(isRenameReady(rotated)).toBe(false)
+  const approved = { ...rotated, reviewStatus: 'OK' as const, manualReviewApproved: true,
+    validations: rotated.validations.filter(item => item.id !== 'manual-orientation-review') }
+  expect(isRenameReady(approved)).toBe(true)
 })
