@@ -64,3 +64,17 @@ export function rotateDocumentManually(
     ],
   }
 }
+
+export function mergeOcrMetadata(
+  current: AnalyzedDocument,
+  ocr: Pick<AnalyzedDocument, 'documentDate' | 'caseMode' | 'isMonthly'>,
+): Partial<AnalyzedDocument> {
+  return {
+    documentDate: current.documentDateOcrSource === 'MANUAL' ? current.documentDate : ocr.documentDate,
+    documentDateOcrSource: current.documentDateOcrSource === 'MANUAL' ? 'MANUAL' : ocr.documentDate ? 'TESSERACT' : null,
+    caseMode: current.caseModeOcrSource === 'MANUAL' ? current.caseMode : ocr.caseMode,
+    caseModeOcrSource: current.caseModeOcrSource === 'MANUAL' ? 'MANUAL' : ocr.caseMode ? 'TESSERACT' : null,
+    isMonthly: current.isMonthlyOcrSource === 'MANUAL' ? current.isMonthly : ocr.isMonthly,
+    isMonthlyOcrSource: current.isMonthlyOcrSource === 'MANUAL' ? 'MANUAL' : 'TESSERACT',
+  }
+}

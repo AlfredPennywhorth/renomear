@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
-import { classifyKnownHeader, scoreKnownHeader, chooseDocumentOrientation, detectDocumentOrientation } from './document-calibration'
+import { classifyKnownHeader, scoreKnownHeader, chooseDocumentOrientation, detectDocumentOrientation, findLabeledProntuarioBox } from './document-calibration'
 
 describe('scoreKnownHeader', () => {
   it('reconhece cabeçalho de ficha C1', () => {
@@ -89,4 +89,48 @@ describe('orientação segura', () => {
     expect(result.certain).toBe(false)
     expect(result.canvas).toBe(source)
   })
+})
+
+
+describe('rótulos impressos', () => {
+  it('orienta envelope pelos três rótulos sem depender do logotipo', () => {
+    const text = 'Prontuário Nº 000123\nData da Reunião 01/01/2026\nSequência 000456'
+    expect(classifyKnownHeader(text)).toBe('ENVELOPE')
+    expect(chooseDocumentOrientation([
+      { rotation: 90, score: scoreKnownHeader(text), headerText: text },
+      { rotation: 0, score: 0, headerText: '' },
+    ])?.rotation).toBe(90)
+  })
+
+  it('localiza número após rótulo e indicador Nº sem assumir posição no papel', () => {
+    const bbox = { x0: 200, y0: 450, x1: 300, y1: 480 }
+    const layout = { blocks: [{ paragraphs: [{ lines: [{ words: [
+      { text: 'Prontuário', bbox: { x0: 20, y0: 450, x1: 150, y1: 480 } },
+      { text: 'Nº', bbox: { x0: 160, y0: 450, x1: 180, y1: 480 } },
+      { text: '000123', bbox },
+    ] }] }] }] }
+    expect(findLabeledProntuarioBox(layout)).toEqual(bbox)
+    expect(findLabeledProntuarioBox({ blocks: [...layout.blocks, ...layout.blocks] })).toBe('AMBIGUOUS')
+  })
+
+  it('não escolhe data ou CPF no lugar de prontuário', () => {
+    const bbox = { x0: 0, y0: 0, x1: 20, y1: 20 }
+    for (const text of ['01/01/2026', '12345678901', 'ABC123']) {
+      expect(findLabeledProntuarioBox({ blocks: [{ paragraphs: [{ lines: [{ words: [
+        { text: 'Prontuário', bbox }, { text, bbox },
+      ] }] }] }] })).toBeNull()
+    }
+  })
+})
+
+
+it('bloqueia rótulos duplicados mesmo com números ilegíveis e aceita Nº:', () => {
+  const bbox = { x0: 0, y0: 0, x1: 20, y1: 20 }
+  const line = (texts: string[]) => ({ words: texts.map(text => ({ text, bbox })) })
+  const layout = (lines: ReturnType<typeof line>[]) => ({ blocks: [{ paragraphs: [{ lines }] }] })
+  expect(findLabeledProntuarioBox(layout([line(['Prontuário', 'Nº:', '000123'])]))).toEqual(bbox)
+  for (const digits of ['000123', 'ilegível']) {
+    expect(findLabeledProntuarioBox(layout([line(['Prontuário', digits]), line(['Prontuário', 'ilegível'])]))).toBe('AMBIGUOUS')
+  }
+  expect(findLabeledProntuarioBox(layout([line(['Prontuário', '000123', 'Prontuário', 'ilegível'])]))).toBe('AMBIGUOUS')
 })

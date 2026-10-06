@@ -7,6 +7,7 @@ function normalizeText(text: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toUpperCase()
+    .replace(/\s+/g, ' ')
 }
 
 export function scoreKnownHeader(text: string): number {
@@ -21,6 +22,7 @@ export function scoreKnownHeader(text: string): number {
   if (value.includes('PREENCHIDO NA REUNIAO')) score += 2
   if (value.includes('DATA DA REUNIAO')) score += 2
   if (value.includes('SEQUENCIA')) score += 1
+  if (/PRONTUARIO/.test(value) && /DATA\s+(?:DA\s+)?REUNIAO/.test(value) && /SEQUENCIA/.test(value)) score += 8
   return score
 }
 
@@ -34,12 +36,13 @@ export function classifyKnownHeader(text: string): DocumentKind | null {
     return 'RECIBO_EMERGENCIA_MANUAL'
   }
   if (
-    value.includes('OBRA DA PIEDADE') &&
+    (/PRONTUARIO/.test(value) && /DATA\s+(?:DA\s+)?REUNIAO/.test(value) && /SEQUENCIA/.test(value)) ||
+    (value.includes('OBRA DA PIEDADE') &&
     (
       value.includes('PREENCHIDO NA REUNIAO') ||
       value.includes('DATA DA REUNIAO') ||
       value.includes('SEQUENCIA')
-    )
+    ))
   ) {
     return 'ENVELOPE'
   }
@@ -124,10 +127,43 @@ export function prepareNumericRegion(source: HTMLCanvasElement): HTMLCanvasEleme
   return output
 }
 
+type OcrWordBox = { text: string; bbox: { x0: number; y0: number; x1: number; y1: number } }
+export type OcrLayout = { blocks?: Array<{ paragraphs: Array<{ lines: Array<{ words: OcrWordBox[] }> }> }> | null }
+
+export function findLabeledProntuarioBox(layout: OcrLayout): OcrWordBox['bbox'] | 'AMBIGUOUS' | null {
+  const boxes: OcrWordBox['bbox'][] = []
+  let labelCount = 0
+  for (const block of layout.blocks ?? []) {
+    for (const paragraph of block.paragraphs) {
+      for (const line of paragraph.lines) {
+        for (let index = 0; index < line.words.length; index++) {
+          if (!/^PRONT(?:UARIO|\.)[:]?$/u.test(normalizeText(line.words[index].text).trim())) continue
+          labelCount++
+          const following = line.words.slice(index + 1)
+          const candidate = following.find(word => !/^(?:N[Oº°]?\.?[:#-]?|[:#-])$/u.test(normalizeText(word.text).trim()))
+          if (candidate && /^\d{1,6}$/.test(candidate.text.trim())) boxes.push(candidate.bbox)
+        }
+      }
+    }
+  }
+  // Count labels even when the associated number is unreadable.
+  return labelCount > 1 ? 'AMBIGUOUS' : boxes[0] ?? null
+}
+
 export function getProntuarioRegion(
   canvas: HTMLCanvasElement,
   kind: AnalyzedDocument['kind'],
+  layout?: OcrLayout,
 ): HTMLCanvasElement | null {
+  const box = layout ? findLabeledProntuarioBox(layout) : null
+  if (box === 'AMBIGUOUS') return null
+  if (box && box.x1 > box.x0 && box.y1 > box.y0) {
+    const pad = Math.max(2, (box.y1 - box.y0) * 0.2)
+    const x = Math.max(0, box.x0 - pad)
+    const y = Math.max(0, box.y0 - pad)
+    return prepareNumericRegion(cropCanvas(canvas, x / canvas.width, y / canvas.height,
+      (box.x1 + pad - x) / canvas.width, (box.y1 + pad - y) / canvas.height))
+  }
   if (kind === 'FICHA_C1') {
     return prepareNumericRegion(cropCanvas(canvas, 0.865, 0.105, 0.135, 0.055))
   }
@@ -284,10 +320,11 @@ export async function extractCalibratedFields(
   worker: Worker,
   canvas: HTMLCanvasElement,
   kind: AnalyzedDocument['kind'],
+  layout?: OcrLayout,
 ): Promise<CalibratedFields> {
   if (kind === 'FICHA_C1') {
     const dateRegion = prepareNumericRegion(cropCanvas(canvas, 0.70, 0.105, 0.18, 0.055))
-    const prontuarioRegion = getProntuarioRegion(canvas, kind)
+    const prontuarioRegion = getProntuarioRegion(canvas, kind, layout)
     if (!prontuarioRegion) return {}
 
     const dateResult = await recognize(worker, dateRegion, PSM.SINGLE_LINE, '0123456789/.-')
@@ -308,7 +345,7 @@ export async function extractCalibratedFields(
   }
 
   if (kind === 'FICHA_C1_VERSO') {
-    const region = getProntuarioRegion(canvas, kind)
+    const region = getProntuarioRegion(canvas, kind, layout)
     if (!region) return {}
     const result = await recognize(worker, region, PSM.SINGLE_LINE, '0123456789')
     const raw = digitsOnly(result.data.text)
@@ -319,7 +356,7 @@ export async function extractCalibratedFields(
   }
 
   if (kind === 'ENVELOPE' || kind === 'RECIBO_ATENDIMENTO') {
-    const prontuarioRegion = getProntuarioRegion(canvas, kind)
+    const prontuarioRegion = getProntuarioRegion(canvas, kind, layout)
     if (!prontuarioRegion) return {}
     const dateRegion = prepareNumericRegion(cropCanvas(canvas, 0.84, 0.095, 0.16, 0.05))
     const sequenceRegion = prepareNumericRegion(cropCanvas(canvas, 0.84, 0.125, 0.16, 0.05))
@@ -348,7 +385,7 @@ export async function extractCalibratedFields(
   if (kind === 'DECLARACAO_TRANSITO') {
     const numeroRegion = prepareNumericRegion(cropCanvas(canvas, 0.69, 0.12, 0.27, 0.075))
     const dateRegion = prepareNumericRegion(cropCanvas(canvas, 0.72, 0.165, 0.22, 0.055))
-    const prontuarioRegion = getProntuarioRegion(canvas, kind)
+    const prontuarioRegion = getProntuarioRegion(canvas, kind, layout)
     if (!prontuarioRegion) return {}
 
     const numeroResult = await recognize(worker, numeroRegion, PSM.SPARSE_TEXT, '0123456789')

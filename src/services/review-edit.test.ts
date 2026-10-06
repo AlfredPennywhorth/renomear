@@ -1,3 +1,4 @@
+import { mergeOcrMetadata } from './review-edit'
 import { describe, expect, it } from 'vitest'
 import type { AnalyzedDocument } from '../domain/document'
 import { sequencePatchFromManualEdit, shouldInvalidateRenameState, rotateDocumentManually } from './review-edit'
@@ -129,5 +130,16 @@ describe('cancelamento de giro', () => {
   it('não promove documento sem estado anterior para RENOMEADO', () => {
     const pending = rotateDocumentManually(doc(), 'RIGHT')
     expect(rotateDocumentManually(pending, 'LEFT').renameState).toBeUndefined()
+  })
+})
+
+
+describe('metadados na releitura', () => {
+  it('preserva correções humanas inclusive mensal desmarcado', () => {
+    const current = doc({ documentDate: null, documentDateOcrSource: 'MANUAL', caseMode: 'EMERGENCIA', caseModeOcrSource: 'MANUAL', isMonthly: false, isMonthlyOcrSource: 'MANUAL' })
+    expect(mergeOcrMetadata(current, { documentDate: '02/02/2026', caseMode: 'REUNIAO', isMonthly: true })).toMatchObject({ documentDate: null, caseMode: 'EMERGENCIA', isMonthly: false })
+  })
+  it('atualiza valores anteriores de OCR', () => {
+    expect(mergeOcrMetadata(doc({ documentDate: '01/01/2026' }), { documentDate: '02/02/2026', caseMode: null, isMonthly: false }).documentDate).toBe('02/02/2026')
   })
 })

@@ -1,5 +1,4 @@
 import { createWorker, OEM, PSM, type Worker } from 'tesseract.js'
-import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist'
 import type { AnalyzedDocument } from '../domain/document'
 import { suggestFileName } from './naming'
 import { extractOcrFields } from './ocr-extraction'
@@ -8,8 +7,11 @@ import {
   detectDocumentOrientation,
   extractCalibratedFields,
   getProntuarioRegion,
+  rotateCanvas,
+  findLabeledProntuarioBox,
 } from './document-calibration'
 import { recognizeProntuarioWithPaddle } from './paddle-ocr'
+import { mergeOcrMetadata } from './review-edit'
 import { decideProntuario } from './prontuario-decision'
 import type { DirectoryHandleLike } from './local-rename'
 
@@ -37,6 +39,7 @@ function createCanvas(width: number, height: number): HTMLCanvasElement {
 
 async function fileToCanvas(file: File): Promise<HTMLCanvasElement> {
   if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
+    const { GlobalWorkerOptions, getDocument } = await import('pdfjs-dist')
     GlobalWorkerOptions.workerSrc = asset('pdf/pdf.worker.min.mjs')
     const bytes = new Uint8Array(await file.arrayBuffer())
     const pdf = await getDocument({ data: bytes }).promise
@@ -96,6 +99,7 @@ export async function analyzeDocumentsWithLocalOcr(
   directory: DirectoryHandleLike,
   documents: AnalyzedDocument[],
   onProgress?: (progress: OcrProgress) => void,
+  options: { useCurrentOrientation?: boolean } = {},
 ): Promise<AnalyzedDocument[]> {
   if (documents.length === 0) return []
 
@@ -151,7 +155,10 @@ export async function analyzeDocumentsWithLocalOcr(
         }
 
         const input = await fileToCanvas(file)
-        const oriented = await detectDocumentOrientation(worker, input)
+        const oriented = options.useCurrentOrientation
+          ? { canvas: rotateCanvas(input, current.rotationDegrees ?? 0), rotation: current.rotationDegrees ?? 0,
+              score: 0, headerText: '', certain: true }
+          : await detectDocumentOrientation(worker, input)
 
         onProgress?.({
           current: index + 1,
@@ -167,12 +174,12 @@ export async function analyzeDocumentsWithLocalOcr(
           preserve_interword_spaces: '1',
           tessedit_char_whitelist: '',
         })
-        const result = await worker.recognize(oriented.canvas)
+        const result = await worker.recognize(oriented.canvas, {}, { blocks: true })
         const confidence = Number.isFinite(result.data.confidence) ? result.data.confidence : 0
         const fields = extractOcrFields(result.data.text)
         const headerKind = classifyKnownHeader(oriented.headerText)
         const kind = current.kind ?? fields.kind ?? headerKind
-        const calibrated = await extractCalibratedFields(worker, oriented.canvas, kind)
+        const calibrated = await extractCalibratedFields(worker, oriented.canvas, kind, result.data)
         const calibratedConfidence = calibrated.fieldConfidence ?? {}
 
         const preferCalibrated = <T,>(
@@ -192,7 +199,7 @@ export async function analyzeDocumentsWithLocalOcr(
         let paddleError: string | undefined
 
         if (current.prontuarioOcrSource !== 'MANUAL') {
-          const prontuarioRegion = getProntuarioRegion(oriented.canvas, kind)
+          const prontuarioRegion = getProntuarioRegion(oriented.canvas, kind, result.data)
           if (prontuarioRegion) {
             onProgress?.({
               current: index + 1,
@@ -228,7 +235,7 @@ export async function analyzeDocumentsWithLocalOcr(
             ? calibrated.prontuario
             : null
 
-        const identity = decideProntuario(
+        let identity = decideProntuario(
           current,
           tesseractProntuario ?? null,
           tesseractConfidence,
@@ -237,19 +244,24 @@ export async function analyzeDocumentsWithLocalOcr(
           corroboratedProntuario,
         )
 
+        const ambiguousIdentity = findLabeledProntuarioBox(result.data) === 'AMBIGUOUS' && current.prontuarioOcrSource !== 'MANUAL'
+        if (ambiguousIdentity) {
+          identity = { value: null, confidence: null, source: null, conflict: false, lowConfidence: false }
+        }
+
         const numeroDocumento = current.numeroDocumentoOcrSource === 'MANUAL'
           ? current.numeroDocumento
           : (
               preferCalibrated(
                 calibrated.numeroDocumento,
                 calibratedConfidence.numeroDocumento,
-                fields.numeroDocumento ?? current.numeroDocumento,
+                fields.numeroDocumento,
               ) ?? null
             )
         const documentDate = preferCalibrated(
           calibrated.documentDate,
           calibratedConfidence.documentDate,
-          fields.documentDate ?? current.documentDate,
+          fields.documentDate,
         ) ?? null
 
         const calibratedNeedsReview = [
@@ -284,9 +296,11 @@ export async function analyzeDocumentsWithLocalOcr(
               ? 'TESSERACT'
               : null,
           manualReviewApproved: false,
-          documentDate,
-          caseMode: calibrated.caseMode ?? fields.caseMode ?? current.caseMode,
-          isMonthly: fields.isMonthly || current.isMonthly,
+          ...mergeOcrMetadata(current, {
+            documentDate,
+            caseMode: calibrated.caseMode ?? fields.caseMode,
+            isMonthly: fields.isMonthly,
+          }),
           confidence: confidence / 100,
           rotationDegrees: isPdfDocument ? 0 : oriented.rotation,
           validations: current.validations.filter(
@@ -298,6 +312,7 @@ export async function analyzeDocumentsWithLocalOcr(
               item.id !== 'ocr-orientation-uncertain' &&
               item.id !== 'ocr-orientation' &&
               item.id !== 'ocr-orientation-pdf' &&
+              item.id !== 'ocr-prontuario-ambiguous' &&
               item.id !== 'ocr-prontuario-conflict' &&
               item.id !== 'ocr-identity-confidence' &&
               item.id !== 'ocr-paddle-unavailable',
@@ -305,6 +320,10 @@ export async function analyzeDocumentsWithLocalOcr(
         }
 
         next.suggestedName = suggestFileName(next)
+        if (next.suggestedName !== current.suggestedName || (next.rotationDegrees ?? 0) !== 0) {
+          next.renameState = 'NAO_RENOMEADO'
+          next.lastRenameError = null
+        }
 
         if (!oriented.certain) {
           next.validations.push({
@@ -314,6 +333,20 @@ export async function analyzeDocumentsWithLocalOcr(
             status: 'REVISAR',
             note: 'Não foi possível determinar a orientação com segurança nos quatro ângulos. Confira a imagem e os campos antes de aprovar.',
           })
+          next.reviewStatus = 'REVISAR'
+        }
+
+        if (options.useCurrentOrientation) {
+          next.validations = [
+            ...next.validations.filter((item) => item.id !== 'manual-orientation-review'),
+            {
+              id: 'manual-orientation-review',
+              label: 'Conferência após releitura orientada',
+              value: (next.rotationDegrees ?? 0) + '°',
+              status: 'REVISAR',
+              note: 'A releitura nesta orientação exige conferência explícita dos campos antes da renomeação.',
+            },
+          ]
           next.reviewStatus = 'REVISAR'
         }
 
@@ -330,6 +363,15 @@ export async function analyzeDocumentsWithLocalOcr(
                 : 'A orientação foi corrigida em memória para leitura e será aplicada quando a imagem for renomeada.',
             },
           ]
+        }
+
+        if (ambiguousIdentity) {
+          next.validations.push({
+            id: 'ocr-prontuario-ambiguous', label: 'Prontuário — múltiplos campos rotulados',
+            value: null, status: 'REVISAR',
+            note: 'Há mais de um campo Prontuário reconhecido. Nenhum recorte posicional pode resolver esta ambiguidade; confira e informe manualmente.',
+          })
+          next.reviewStatus = 'REVISAR'
         }
 
         if (identity.conflict) {
