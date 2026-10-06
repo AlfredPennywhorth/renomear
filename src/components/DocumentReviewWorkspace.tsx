@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { AnalyzedDocument } from '../domain/document'
 import type { DirectoryHandleLike } from '../services/local-rename'
 import ReviewPanel from './ReviewPanel'
+import { rotateDocumentManually } from '../services/review-edit'
 
 type Props = {
   directory: DirectoryHandleLike
@@ -18,6 +19,7 @@ function DocumentReviewWorkspace({ directory, document, onClose, onChange }: Pro
   const [url, setUrl] = useState<string | null>(null)
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const imageCanvasRef = useRef<HTMLCanvasElement>(null)
   const dialogRef = useRef<HTMLElement>(null)
   const onCloseRef = useRef(onClose)
 
@@ -31,7 +33,33 @@ function DocumentReviewWorkspace({ directory, document, onClose, onChange }: Pro
       if (event.key === 'Escape') onCloseRef.current()
     }
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    useEffect(() => {
+    if (!file || isPdf(file)) return
+    let cancelled = false
+    createImageBitmap(file).then(bitmap => {
+      try {
+        if (cancelled) return
+        const canvas = imageCanvasRef.current
+        if (!canvas) return
+        const rotation = document.rotationDegrees ?? 0
+        const swap = rotation === 90 || rotation === 270
+        canvas.width = swap ? bitmap.height : bitmap.width
+        canvas.height = swap ? bitmap.width : bitmap.height
+        const context = canvas.getContext('2d')
+        if (!context) throw new Error('Não foi possível preparar a visualização.')
+        context.translate(canvas.width / 2, canvas.height / 2)
+        context.rotate(rotation * Math.PI / 180)
+        context.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2)
+      } finally {
+        bitmap.close()
+      }
+    }).catch(() => {
+      if (!cancelled) setError('Não foi possível abrir a visualização local deste arquivo.')
+    })
+    return () => { cancelled = true }
+  }, [file, document.rotationDegrees])
+
+  return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
   useEffect(() => {
@@ -80,24 +108,36 @@ function DocumentReviewWorkspace({ directory, document, onClose, onChange }: Pro
           </span>
         </header>
 
+        <div className="review-rotation-controls">
+          <button type="button" className="secondary-button" disabled={!file || !!error || isPdf(file)}
+            onClick={() => onChange(rotateDocumentManually(document, 'LEFT'))}>
+            Girar à esquerda ↶
+          </button>
+          <button type="button" className="secondary-button" disabled={!file || !!error || isPdf(file)}
+            onClick={() => onChange(rotateDocumentManually(document, 'RIGHT'))}>
+            Girar à direita ↷
+          </button>
+          {file && isPdf(file) && <span>A gravação de rotação em PDF ainda não está disponível.</span>}
+        </div>
+
         <div className="review-document-stage">
           {error && <p className="preview-message">{error}</p>}
           {!error && !url && <p className="preview-message">Abrindo arquivo…</p>}
           {url && file && (
             isPdf(file)
               ? <iframe title={'Documento PDF: ' + document.originalName} src={url} className="review-pdf" />
-              : <img
-                src={url}
-                alt={'Documento ' + document.originalName}
+              : <canvas
+                ref={imageCanvasRef}
+                role="img"
+                aria-label={'Documento ' + document.originalName}
                 className="review-image"
-                style={document.rotationDegrees ? { transform: 'rotate(' + document.rotationDegrees + 'deg)' } : undefined}
               />
           )}
         </div>
 
         <p className="review-workspace-note">
           Visualização local. O arquivo não é enviado ao servidor.
-          {document.rotationDegrees ? ' Orientação detectada: ' + document.rotationDegrees + '°.' : ''}
+          {document.rotationDegrees ? ' Rotação pendente de gravação: ' + document.rotationDegrees + '°.' : ''}
         </p>
       </div>
 
