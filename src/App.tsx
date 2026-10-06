@@ -102,7 +102,10 @@ function App() {
     try {
       const [read] = await analyzeDocumentsWithLocalOcr(directory, [selectedDocument], undefined, { useCurrentOrientation: true })
       if (read) updateDocument(analyzeBatch([read])[0])
-      setMessage('Documento relido na orientação escolhida. Confira os campos e aprove a revisão.')
+      const failure = read?.validations.find(item => item.id === 'ocr-error' || item.id === 'ocr-empty-file')
+      setMessage(failure
+        ? 'A releitura falhou: ' + (failure.note ?? 'Não foi possível ler o arquivo.')
+        : 'Documento relido na orientação escolhida. Confira os campos e aprove a revisão.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Falha na releitura local.')
     } finally {
