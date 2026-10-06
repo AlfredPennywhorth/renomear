@@ -181,12 +181,9 @@ export function getProntuarioRegion(
   kind: AnalyzedDocument['kind'],
   layout?: OcrLayout,
 ): HTMLCanvasElement | null {
-  // C1 e DT têm geometria institucional estável. O smoke real mostrou que a
-  // leitura global pode truncar dígitos mesmo quando o campo fixo está nítido.
-  // Nesses dois tipos, a região calibrada é a fonte primária.
-  if (kind === 'FICHA_C1') {
-    return prepareNumericRegion(cropCanvas(canvas, 0.88, 0.115, 0.12, 0.06))
-  }
+  // A DT tem geometria institucional estável. O smoke real mostrou que a
+  // leitura global pode truncar dígitos mesmo quando o campo fixo está nítido,
+  // por isso o recorte calibrado da DT é a fonte primária.
   if (kind === 'DECLARACAO_TRANSITO') {
     return prepareNumericRegion(cropCanvas(canvas, 0.16, 0.255, 0.23, 0.06))
   }
@@ -199,6 +196,9 @@ export function getProntuarioRegion(
     const y = Math.max(0, box.y0 - pad)
     return prepareNumericRegion(cropCanvas(canvas, x / canvas.width, y / canvas.height,
       (box.x1 + pad - x) / canvas.width, (box.y1 + pad - y) / canvas.height))
+  }
+  if (kind === 'FICHA_C1') {
+    return prepareNumericRegion(cropCanvas(canvas, 0.865, 0.105, 0.135, 0.055))
   }
   if (kind === 'FICHA_C1_VERSO') {
     return prepareNumericRegion(cropCanvas(canvas, 0.80, 0, 0.20, 0.11))
