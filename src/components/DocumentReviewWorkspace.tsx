@@ -33,33 +33,8 @@ function DocumentReviewWorkspace({ directory, document, onClose, onChange }: Pro
       if (event.key === 'Escape') onCloseRef.current()
     }
     window.addEventListener('keydown', onKeyDown)
-    useEffect(() => {
-    if (!file || isPdf(file)) return
-    let cancelled = false
-    createImageBitmap(file).then(bitmap => {
-      try {
-        if (cancelled) return
-        const canvas = imageCanvasRef.current
-        if (!canvas) return
-        const rotation = document.rotationDegrees ?? 0
-        const swap = rotation === 90 || rotation === 270
-        canvas.width = swap ? bitmap.height : bitmap.width
-        canvas.height = swap ? bitmap.width : bitmap.height
-        const context = canvas.getContext('2d')
-        if (!context) throw new Error('Não foi possível preparar a visualização.')
-        context.translate(canvas.width / 2, canvas.height / 2)
-        context.rotate(rotation * Math.PI / 180)
-        context.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2)
-      } finally {
-        bitmap.close()
-      }
-    }).catch(() => {
-      if (!cancelled) setError('Não foi possível abrir a visualização local deste arquivo.')
-    })
-    return () => { cancelled = true }
-  }, [file, document.rotationDegrees])
 
-  return () => window.removeEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
   useEffect(() => {
@@ -87,6 +62,33 @@ function DocumentReviewWorkspace({ directory, document, onClose, onChange }: Pro
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
   }, [directory, document.originalName])
+
+  useEffect(() => {
+    if (!file || isPdf(file)) return
+    let cancelled = false
+    createImageBitmap(file).then(bitmap => {
+      try {
+        if (cancelled) return
+        const canvas = imageCanvasRef.current
+        if (!canvas) return
+        const rotation = document.rotationDegrees ?? 0
+        const swap = rotation === 90 || rotation === 270
+        canvas.width = swap ? bitmap.height : bitmap.width
+        canvas.height = swap ? bitmap.width : bitmap.height
+        const context = canvas.getContext('2d')
+        if (!context) throw new Error('Não foi possível preparar a visualização.')
+        context.translate(canvas.width / 2, canvas.height / 2)
+        context.rotate(rotation * Math.PI / 180)
+        context.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2)
+      } finally {
+        bitmap.close()
+      }
+    }).catch(() => {
+      if (!cancelled) setError('Não foi possível abrir a visualização local deste arquivo.')
+    })
+    return () => { cancelled = true }
+  }, [file, document.rotationDegrees])
+
 
   return (
     <section
