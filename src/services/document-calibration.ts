@@ -187,6 +187,9 @@ export function getProntuarioRegion(
   if (kind === 'FICHA_C1') {
     return prepareNumericRegion(cropCanvas(canvas, 0.88, 0.115, 0.12, 0.06))
   }
+  if (kind === 'DECLARACAO_TRANSITO') {
+    return prepareNumericRegion(cropCanvas(canvas, 0.16, 0.255, 0.23, 0.06))
+  }
 
   const box = layout ? findLabeledProntuarioBox(layout) : null
   if (box === 'AMBIGUOUS') return null
@@ -202,9 +205,6 @@ export function getProntuarioRegion(
   }
   if (kind === 'ENVELOPE' || kind === 'RECIBO_ATENDIMENTO') {
     return prepareNumericRegion(cropCanvas(canvas, 0.84, 0.055, 0.16, 0.055))
-  }
-  if (kind === 'DECLARACAO_TRANSITO') {
-    return prepareNumericRegion(cropCanvas(canvas, 0.16, 0.255, 0.23, 0.06))
   }
   return null
 }
