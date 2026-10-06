@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi, afterEach } from 'vitest'
 import type { AnalyzedDocument } from '../domain/document'
 import { renameApprovedDocuments, rotationOutputMime, type DirectoryHandleLike } from './local-rename'
 
@@ -24,6 +24,7 @@ function makeFile(name: string, bytes: Uint8Array): File {
   const copy = Uint8Array.from(bytes)
   return {
     name,
+    type: '',
     size: copy.byteLength,
     arrayBuffer: async () => copy.buffer.slice(0) as ArrayBuffer,
   } as unknown as File
@@ -91,6 +92,26 @@ describe('rotationOutputMime', () => {
 })
 
 describe('renameApprovedDocuments', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('salva giro no mesmo nome preservando a origem até verificar a nova imagem', async () => {
+    const original = new Uint8Array([1, 2, 3])
+    const rotated = new Uint8Array([4, 5, 6])
+    const { directory, files } = fakeDirectory({ 'origem.jpg': original })
+    vi.stubGlobal('createImageBitmap', async () => ({ width: 20, height: 30, close() {} }))
+    vi.stubGlobal('document', { createElement: () => ({
+      width: 0, height: 0,
+      getContext: () => ({ fillRect() {}, translate() {}, rotate() {}, drawImage() {} }),
+      toBlob: (callback: (blob: Blob) => void) => callback(new Blob([rotated])),
+    }) })
+    const [result] = await renameApprovedDocuments(directory, [makeDocument({
+      suggestedName: 'origem.jpg', rotationDegrees: 90,
+    })])
+    expect(result.status).toBe('RENOMEADO')
+    expect(files.get('origem.jpg')).toEqual(rotated)
+    expect([...files.keys()]).toEqual(['origem.jpg'])
+  })
+
   it('só remove o original depois de verificar a integridade da cópia', async () => {
     const original = new Uint8Array([1, 2, 3, 4])
     const { directory, files, removed } = fakeDirectory({ 'origem.jpg': original })
