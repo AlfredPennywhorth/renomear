@@ -161,7 +161,8 @@ export function isAutomaticRenameReady(document: AnalyzedDocument): boolean {
         item.id === 'ocr-prontuario-conflict' ||
         item.id === 'ocr-identity-confidence' ||
         item.id === 'ocr-paddle-unavailable' ||
-        item.id === 'ocr-orientation-pdf'
+        item.id === 'ocr-orientation-pdf' ||
+        item.id === 'ocr-orientation-uncertain'
       ) &&
       item.status === 'REVISAR',
   )
