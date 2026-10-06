@@ -8,6 +8,7 @@ import {
   detectDocumentOrientation,
   extractCalibratedFields,
   getProntuarioRegion,
+  rotateCanvas,
 } from './document-calibration'
 import { recognizeProntuarioWithPaddle } from './paddle-ocr'
 import { decideProntuario } from './prontuario-decision'
@@ -96,6 +97,7 @@ export async function analyzeDocumentsWithLocalOcr(
   directory: DirectoryHandleLike,
   documents: AnalyzedDocument[],
   onProgress?: (progress: OcrProgress) => void,
+  options: { useCurrentOrientation?: boolean } = {},
 ): Promise<AnalyzedDocument[]> {
   if (documents.length === 0) return []
 
@@ -151,7 +153,10 @@ export async function analyzeDocumentsWithLocalOcr(
         }
 
         const input = await fileToCanvas(file)
-        const oriented = await detectDocumentOrientation(worker, input)
+        const oriented = options.useCurrentOrientation
+          ? { canvas: rotateCanvas(input, current.rotationDegrees ?? 0), rotation: current.rotationDegrees ?? 0,
+              score: 0, headerText: '', certain: true }
+          : await detectDocumentOrientation(worker, input)
 
         onProgress?.({
           current: index + 1,
@@ -167,12 +172,12 @@ export async function analyzeDocumentsWithLocalOcr(
           preserve_interword_spaces: '1',
           tessedit_char_whitelist: '',
         })
-        const result = await worker.recognize(oriented.canvas)
+        const result = await worker.recognize(oriented.canvas, {}, { blocks: true })
         const confidence = Number.isFinite(result.data.confidence) ? result.data.confidence : 0
         const fields = extractOcrFields(result.data.text)
         const headerKind = classifyKnownHeader(oriented.headerText)
         const kind = current.kind ?? fields.kind ?? headerKind
-        const calibrated = await extractCalibratedFields(worker, oriented.canvas, kind)
+        const calibrated = await extractCalibratedFields(worker, oriented.canvas, kind, result.data)
         const calibratedConfidence = calibrated.fieldConfidence ?? {}
 
         const preferCalibrated = <T,>(
@@ -192,7 +197,7 @@ export async function analyzeDocumentsWithLocalOcr(
         let paddleError: string | undefined
 
         if (current.prontuarioOcrSource !== 'MANUAL') {
-          const prontuarioRegion = getProntuarioRegion(oriented.canvas, kind)
+          const prontuarioRegion = getProntuarioRegion(oriented.canvas, kind, result.data)
           if (prontuarioRegion) {
             onProgress?.({
               current: index + 1,
@@ -246,7 +251,9 @@ export async function analyzeDocumentsWithLocalOcr(
                 fields.numeroDocumento ?? current.numeroDocumento,
               ) ?? null
             )
-        const documentDate = preferCalibrated(
+        const documentDate = options.useCurrentOrientation && current.documentDate
+          ? current.documentDate
+          : preferCalibrated(
           calibrated.documentDate,
           calibratedConfidence.documentDate,
           fields.documentDate ?? current.documentDate,
@@ -305,6 +312,10 @@ export async function analyzeDocumentsWithLocalOcr(
         }
 
         next.suggestedName = suggestFileName(next)
+        if (next.suggestedName !== current.suggestedName || (next.rotationDegrees ?? 0) !== 0) {
+          next.renameState = 'NAO_RENOMEADO'
+          next.lastRenameError = null
+        }
 
         if (!oriented.certain) {
           next.validations.push({
