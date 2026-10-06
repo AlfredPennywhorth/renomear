@@ -134,3 +134,18 @@ it('bloqueia rótulos duplicados mesmo com números ilegíveis e aceita Nº:', (
   }
   expect(findLabeledProntuarioBox(layout([line(['Prontuário', '000123', 'Prontuário', 'ilegível'])]))).toBe('AMBIGUOUS')
 })
+
+
+describe('classificação por sinais estáveis do formulário', () => {
+  it('reconhece C1 mesmo quando o título principal falha no OCR', () => {
+    const text = 'Caso de (assinale com x) Reunião Consideração (assinale com x) Caso novo Atenderá (assinale x) Irmãs'
+    expect(classifyKnownHeader(text)).toBe('FICHA_C1')
+    expect(scoreKnownHeader(text)).toBeGreaterThanOrEqual(7)
+  })
+
+  it('reconhece DT por sinais impressos quando o título principal falha no OCR', () => {
+    const text = 'PIEDADE - SETOR CENTRO Para fins de trânsito Via Almoxarifado SAÍDA'
+    expect(classifyKnownHeader(text)).toBe('DECLARACAO_TRANSITO')
+    expect(scoreKnownHeader(text)).toBeGreaterThanOrEqual(7)
+  })
+})

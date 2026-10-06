@@ -164,7 +164,8 @@ export function isAutomaticRenameReady(document: AnalyzedDocument): boolean {
         item.id === 'ocr-paddle-unavailable' ||
         item.id === 'ocr-orientation-pdf' ||
         item.id === 'ocr-orientation-uncertain' ||
-        item.id === 'manual-orientation-review'
+        item.id === 'manual-orientation-review' ||
+        item.id === 'ocr-c1-verso-inherited'
       ) &&
       item.status === 'REVISAR',
   )

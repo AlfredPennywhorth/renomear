@@ -10,6 +10,24 @@ function normalizeText(text: string): string {
     .replace(/\s+/g, ' ')
 }
 
+function countC1Signals(value: string): number {
+  return [
+    /CASO DE.*ASSINALE/,
+    /CONSIDERACAO.*ASSINALE/,
+    /ATENDERA.*ASSINALE/,
+    /PREENCHIDO NA REUNIAO/,
+  ].filter((pattern) => pattern.test(value)).length
+}
+
+function countDtSignals(value: string): number {
+  return [
+    /PIEDADE\s*-\s*SETOR CENTRO/,
+    /PARA FINS DE TRANSITO/,
+    /VIA ALMOXARIFADO/,
+    /\bSAIDA\b/,
+  ].filter((pattern) => pattern.test(value)).length
+}
+
 export function scoreKnownHeader(text: string): number {
   const value = normalizeText(text)
 
@@ -23,15 +41,23 @@ export function scoreKnownHeader(text: string): number {
   if (value.includes('DATA DA REUNIAO')) score += 2
   if (value.includes('SEQUENCIA')) score += 1
   if (/PRONTUARIO/.test(value) && /DATA\s+(?:DA\s+)?REUNIAO/.test(value) && /SEQUENCIA/.test(value)) score += 8
+  score += Math.min(8, countC1Signals(value) * 3)
+  score += Math.min(8, countDtSignals(value) * 3)
   return score
 }
 
 export function classifyKnownHeader(text: string): DocumentKind | null {
   const value = normalizeText(text)
 
-  if (value.includes('FICHA DE APRESENTACAO DE CASO')) return 'FICHA_C1'
+  if (value.includes('FICHA DE APRESENTACAO DE CASO') || countC1Signals(value) >= 2) return 'FICHA_C1'
   if (value.includes('PEDIDO DE ROUPAS E DIVERSOS')) return 'FICHA_C1_VERSO'
-  if (value.includes('DECLARACAO DE TRANSITO')) return 'DECLARACAO_TRANSITO'
+  if (
+    value.includes('DECLARACAO DE TRANSITO') ||
+    (
+      /PIEDADE\s*-\s*SETOR CENTRO/.test(value) &&
+      countDtSignals(value) >= 2
+    )
+  ) return 'DECLARACAO_TRANSITO'
   if (value.includes('RECIBO DE ATENDIMENTO') && value.includes('OBRA DA PIEDADE')) {
     return 'RECIBO_EMERGENCIA_MANUAL'
   }
@@ -155,6 +181,13 @@ export function getProntuarioRegion(
   kind: AnalyzedDocument['kind'],
   layout?: OcrLayout,
 ): HTMLCanvasElement | null {
+  // A DT tem geometria institucional estável. O smoke real mostrou que a
+  // leitura global pode truncar dígitos mesmo quando o campo fixo está nítido,
+  // por isso o recorte calibrado da DT é a fonte primária.
+  if (kind === 'DECLARACAO_TRANSITO') {
+    return prepareNumericRegion(cropCanvas(canvas, 0.16, 0.255, 0.23, 0.06))
+  }
+
   const box = layout ? findLabeledProntuarioBox(layout) : null
   if (box === 'AMBIGUOUS') return null
   if (box && box.x1 > box.x0 && box.y1 > box.y0) {
@@ -172,9 +205,6 @@ export function getProntuarioRegion(
   }
   if (kind === 'ENVELOPE' || kind === 'RECIBO_ATENDIMENTO') {
     return prepareNumericRegion(cropCanvas(canvas, 0.84, 0.055, 0.16, 0.055))
-  }
-  if (kind === 'DECLARACAO_TRANSITO') {
-    return prepareNumericRegion(cropCanvas(canvas, 0.16, 0.255, 0.23, 0.06))
   }
   return null
 }
@@ -393,16 +423,14 @@ export async function extractCalibratedFields(
     const prontuarioResult = await recognize(worker, prontuarioRegion, PSM.SINGLE_LINE, '0123456789')
 
     const numeroCandidate = sixDigitCandidateFromRecognition(numeroResult)
-    const rawProntuario = digitsOnly(prontuarioResult.data.text)
+    const prontuarioCandidate = sixDigitCandidateFromRecognition(prontuarioResult)
 
     return {
       numeroDocumento: numeroCandidate.value,
       documentDate: dateFromText(dateResult.data.text),
-      prontuario: rawProntuario.length >= 1 && rawProntuario.length <= 6
-        ? normalizeProntuario(rawProntuario)
-        : null,
+      prontuario: prontuarioCandidate.value,
       fieldConfidence: {
-        prontuario: prontuarioResult.data.confidence,
+        prontuario: prontuarioCandidate.confidence,
         documentDate: dateResult.data.confidence,
         numeroDocumento: numeroCandidate.confidence,
       },

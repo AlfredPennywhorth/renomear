@@ -27,10 +27,25 @@ function firstMatch(text: string, patterns: RegExp[]): string | null {
 
 function classify(text: string): DocumentKind | null {
   const normalized = normalizeText(text)
+  const c1Signals = [
+    /CASO DE.*ASSINALE/,
+    /CONSIDERACAO.*ASSINALE/,
+    /ATENDERA.*ASSINALE/,
+    /PREENCHIDO NA REUNIAO/,
+  ].filter((pattern) => pattern.test(normalized)).length
+  const dtSignals = [
+    /PIEDADE\s*-\s*SETOR CENTRO/,
+    /PARA FINS DE TRANSITO/,
+    /VIA ALMOXARIFADO/,
+    /\bSAIDA\b/,
+  ].filter((pattern) => pattern.test(normalized)).length
 
-  if (normalized.includes('FICHA DE APRESENTACAO DE CASO')) return 'FICHA_C1'
+  if (normalized.includes('FICHA DE APRESENTACAO DE CASO') || c1Signals >= 2) return 'FICHA_C1'
   if (normalized.includes('PEDIDO DE ROUPAS E DIVERSOS')) return 'FICHA_C1_VERSO'
-  if (normalized.includes('DECLARACAO DE TRANSITO')) return 'DECLARACAO_TRANSITO'
+  if (
+    normalized.includes('DECLARACAO DE TRANSITO') ||
+    (/PIEDADE\s*-\s*SETOR CENTRO/.test(normalized) && dtSignals >= 2)
+  ) return 'DECLARACAO_TRANSITO'
   if (normalized.includes('RECIBO DE ATENDIMENTO') && normalized.includes('OBRA DA PIEDADE')) {
     return 'RECIBO_EMERGENCIA_MANUAL'
   }
