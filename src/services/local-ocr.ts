@@ -336,6 +336,20 @@ export async function analyzeDocumentsWithLocalOcr(
           next.reviewStatus = 'REVISAR'
         }
 
+        if (options.useCurrentOrientation) {
+          next.validations = [
+            ...next.validations.filter((item) => item.id !== 'manual-orientation-review'),
+            {
+              id: 'manual-orientation-review',
+              label: 'Conferência após releitura orientada',
+              value: (next.rotationDegrees ?? 0) + '°',
+              status: 'REVISAR',
+              note: 'A releitura nesta orientação exige conferência explícita dos campos antes da renomeação.',
+            },
+          ]
+          next.reviewStatus = 'REVISAR'
+        }
+
         if (oriented.rotation !== 0) {
           next.validations = [
             ...next.validations,
