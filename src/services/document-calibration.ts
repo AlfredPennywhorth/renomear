@@ -130,7 +130,7 @@ export function prepareNumericRegion(source: HTMLCanvasElement): HTMLCanvasEleme
 type OcrWordBox = { text: string; bbox: { x0: number; y0: number; x1: number; y1: number } }
 export type OcrLayout = { blocks?: Array<{ paragraphs: Array<{ lines: Array<{ words: OcrWordBox[] }> }> }> | null }
 
-export function findLabeledProntuarioBox(layout: OcrLayout): OcrWordBox['bbox'] | null {
+export function findLabeledProntuarioBox(layout: OcrLayout): OcrWordBox['bbox'] | 'AMBIGUOUS' | null {
   const boxes: OcrWordBox['bbox'][] = []
   for (const block of layout.blocks ?? []) {
     for (const paragraph of block.paragraphs) {
@@ -144,7 +144,7 @@ export function findLabeledProntuarioBox(layout: OcrLayout): OcrWordBox['bbox'] 
     }
   }
   // Multiple labeled occurrences require human review instead of choosing one arbitrarily.
-  return boxes.length === 1 ? boxes[0] : null
+  return boxes.length > 1 ? 'AMBIGUOUS' : boxes[0] ?? null
 }
 
 export function getProntuarioRegion(
@@ -153,6 +153,7 @@ export function getProntuarioRegion(
   layout?: OcrLayout,
 ): HTMLCanvasElement | null {
   const box = layout ? findLabeledProntuarioBox(layout) : null
+  if (box === 'AMBIGUOUS') return null
   if (box && box.x1 > box.x0 && box.y1 > box.y0) {
     const pad = Math.max(2, (box.y1 - box.y0) * 0.2)
     const x = Math.max(0, box.x0 - pad)
