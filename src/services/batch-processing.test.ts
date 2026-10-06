@@ -367,3 +367,24 @@ it('exige aprovação humana após giro de DT com identidade segura', () => {
     validations: rotated.validations.filter(item => item.id !== 'manual-orientation-review') }
   expect(isRenameReady(approved)).toBe(true)
 })
+
+
+it('não renomeia automaticamente verso com identidade herdada até revisão humana', () => {
+  const result = doc({
+    kind: 'FICHA_C1_VERSO',
+    prontuario: '003626',
+    prontuarioConfidence: 0.99,
+    prontuarioOcrSource: 'TESSERACT',
+    suggestedName: '003626_c1_verso.jpg',
+    reviewStatus: 'REVISAR',
+    validations: [{
+      id: 'ocr-c1-verso-inherited',
+      label: 'Vínculo com Ficha C1 frente',
+      value: '003626',
+      status: 'REVISAR',
+    }],
+  })
+
+  expect(isAutomaticRenameReady(result)).toBe(false)
+  expect(isRenameReady(result)).toBe(false)
+})
