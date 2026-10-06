@@ -9,13 +9,15 @@ type Props = {
   document: AnalyzedDocument
   onClose: () => void
   onChange: (document: AnalyzedDocument) => void
+  onReread?: () => void
+  rereading?: boolean
 }
 
 function isPdf(file: File) {
   return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
 }
 
-function DocumentReviewWorkspace({ directory, document, onClose, onChange }: Props) {
+function DocumentReviewWorkspace({ directory, document, onClose, onChange, onReread, rereading = false }: Props) {
   const [url, setUrl] = useState<string | null>(null)
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -111,14 +113,18 @@ function DocumentReviewWorkspace({ directory, document, onClose, onChange }: Pro
         </header>
 
         <div className="review-rotation-controls">
-          <button type="button" className="secondary-button" disabled={!file || !!error || isPdf(file)}
+          <button type="button" className="secondary-button" disabled={rereading || !file || !!error || isPdf(file)}
             onClick={() => onChange(rotateDocumentManually(document, 'LEFT'))}>
             Girar à esquerda ↶
           </button>
-          <button type="button" className="secondary-button" disabled={!file || !!error || isPdf(file)}
+          <button type="button" className="secondary-button" disabled={rereading || !file || !!error || isPdf(file)}
             onClick={() => onChange(rotateDocumentManually(document, 'RIGHT'))}>
             Girar à direita ↷
           </button>
+          {onReread && <button type="button" className="secondary-button"
+            disabled={rereading || !file || !!error || isPdf(file)} onClick={onReread}>
+            {rereading ? 'Relendo…' : 'Reler nesta orientação'}
+          </button>}
           {file && isPdf(file) && <span>A gravação de rotação em PDF ainda não está disponível.</span>}
         </div>
 
@@ -144,12 +150,14 @@ function DocumentReviewWorkspace({ directory, document, onClose, onChange }: Pro
       </div>
 
       <div className="review-workspace-fields">
+        <fieldset disabled={rereading} style={{ border: 0, padding: 0, margin: 0 }}>
         <ReviewPanel
           document={document}
           onClose={onClose}
           onChange={onChange}
           embedded
         />
+        </fieldset>
       </div>
     </section>
   )
