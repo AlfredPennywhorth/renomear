@@ -10,6 +10,24 @@ function normalizeText(text: string): string {
     .replace(/\s+/g, ' ')
 }
 
+function countC1Signals(value: string): number {
+  return [
+    /CASO DE.*ASSINALE/,
+    /CONSIDERACAO.*ASSINALE/,
+    /ATENDERA.*ASSINALE/,
+    /PREENCHIDO NA REUNIAO/,
+  ].filter((pattern) => pattern.test(value)).length
+}
+
+function countDtSignals(value: string): number {
+  return [
+    /PIEDADE\s*-\s*SETOR CENTRO/,
+    /PARA FINS DE TRANSITO/,
+    /VIA ALMOXARIFADO/,
+    /\bSAIDA\b/,
+  ].filter((pattern) => pattern.test(value)).length
+}
+
 export function scoreKnownHeader(text: string): number {
   const value = normalizeText(text)
 
@@ -23,15 +41,23 @@ export function scoreKnownHeader(text: string): number {
   if (value.includes('DATA DA REUNIAO')) score += 2
   if (value.includes('SEQUENCIA')) score += 1
   if (/PRONTUARIO/.test(value) && /DATA\s+(?:DA\s+)?REUNIAO/.test(value) && /SEQUENCIA/.test(value)) score += 8
+  score += Math.min(8, countC1Signals(value) * 3)
+  score += Math.min(8, countDtSignals(value) * 3)
   return score
 }
 
 export function classifyKnownHeader(text: string): DocumentKind | null {
   const value = normalizeText(text)
 
-  if (value.includes('FICHA DE APRESENTACAO DE CASO')) return 'FICHA_C1'
+  if (value.includes('FICHA DE APRESENTACAO DE CASO') || countC1Signals(value) >= 2) return 'FICHA_C1'
   if (value.includes('PEDIDO DE ROUPAS E DIVERSOS')) return 'FICHA_C1_VERSO'
-  if (value.includes('DECLARACAO DE TRANSITO')) return 'DECLARACAO_TRANSITO'
+  if (
+    value.includes('DECLARACAO DE TRANSITO') ||
+    (
+      /PIEDADE\s*-\s*SETOR CENTRO/.test(value) &&
+      countDtSignals(value) >= 2
+    )
+  ) return 'DECLARACAO_TRANSITO'
   if (value.includes('RECIBO DE ATENDIMENTO') && value.includes('OBRA DA PIEDADE')) {
     return 'RECIBO_EMERGENCIA_MANUAL'
   }
@@ -155,6 +181,13 @@ export function getProntuarioRegion(
   kind: AnalyzedDocument['kind'],
   layout?: OcrLayout,
 ): HTMLCanvasElement | null {
+  // C1 e DT têm geometria institucional estável. O smoke real mostrou que a
+  // leitura global pode truncar dígitos mesmo quando o campo fixo está nítido.
+  // Nesses dois tipos, a região calibrada é a fonte primária.
+  if (kind === 'FICHA_C1') {
+    return prepareNumericRegion(cropCanvas(canvas, 0.88, 0.115, 0.12, 0.06))
+  }
+
   const box = layout ? findLabeledProntuarioBox(layout) : null
   if (box === 'AMBIGUOUS') return null
   if (box && box.x1 > box.x0 && box.y1 > box.y0) {
@@ -163,9 +196,6 @@ export function getProntuarioRegion(
     const y = Math.max(0, box.y0 - pad)
     return prepareNumericRegion(cropCanvas(canvas, x / canvas.width, y / canvas.height,
       (box.x1 + pad - x) / canvas.width, (box.y1 + pad - y) / canvas.height))
-  }
-  if (kind === 'FICHA_C1') {
-    return prepareNumericRegion(cropCanvas(canvas, 0.865, 0.105, 0.135, 0.055))
   }
   if (kind === 'FICHA_C1_VERSO') {
     return prepareNumericRegion(cropCanvas(canvas, 0.80, 0, 0.20, 0.11))
@@ -338,7 +368,7 @@ export async function extractCalibratedFields(
         : null,
       caseMode: detectC1CaseMode(canvas),
       fieldConfidence: {
-        prontuario: prontuarioResult.data.confidence,
+        prontuario: prontuarioCandidate.confidence,
         documentDate: dateResult.data.confidence,
       },
     }
@@ -393,14 +423,12 @@ export async function extractCalibratedFields(
     const prontuarioResult = await recognize(worker, prontuarioRegion, PSM.SINGLE_LINE, '0123456789')
 
     const numeroCandidate = sixDigitCandidateFromRecognition(numeroResult)
-    const rawProntuario = digitsOnly(prontuarioResult.data.text)
+    const prontuarioCandidate = sixDigitCandidateFromRecognition(prontuarioResult)
 
     return {
       numeroDocumento: numeroCandidate.value,
       documentDate: dateFromText(dateResult.data.text),
-      prontuario: rawProntuario.length >= 1 && rawProntuario.length <= 6
-        ? normalizeProntuario(rawProntuario)
-        : null,
+      prontuario: prontuarioCandidate.value,
       fieldConfidence: {
         prontuario: prontuarioResult.data.confidence,
         documentDate: dateResult.data.confidence,
