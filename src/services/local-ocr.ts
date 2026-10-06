@@ -13,6 +13,7 @@ import {
 import { recognizeProntuarioWithPaddle } from './paddle-ocr'
 import { mergeOcrMetadata } from './review-edit'
 import { decideProntuario } from './prontuario-decision'
+import { pairAdjacentC1Versos } from './c1-pairing'
 import type { DirectoryHandleLike } from './local-rename'
 
 export type OcrProgress = {
@@ -216,9 +217,16 @@ export async function analyzeDocumentsWithLocalOcr(
         }
 
         const tesseractProntuario =
-          calibrated.prontuario ??
-          fields.prontuario ??
-          (current.prontuarioOcrSource === 'MANUAL' ? current.prontuario : null)
+          kind === 'DECLARACAO_TRANSITO'
+            ? (
+                calibrated.prontuario ??
+                (current.prontuarioOcrSource === 'MANUAL' ? current.prontuario : null)
+              )
+            : (
+                calibrated.prontuario ??
+                fields.prontuario ??
+                (current.prontuarioOcrSource === 'MANUAL' ? current.prontuario : null)
+              )
         const tesseractConfidence = calibrated.prontuario
           ? score01(calibratedConfidence.prontuario, true)
           : 0
@@ -469,7 +477,7 @@ export async function analyzeDocumentsWithLocalOcr(
       }
     }
 
-    return analyzed
+    return pairAdjacentC1Versos(analyzed)
   } finally {
     await worker?.terminate()
   }
