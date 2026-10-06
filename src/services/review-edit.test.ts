@@ -100,3 +100,34 @@ describe('giro manual', () => {
     expect(rotateDocumentManually(doc({ reviewStatus: 'NAO_CONFORME' }), 'RIGHT').reviewStatus).toBe('NAO_CONFORME')
   })
 })
+
+
+describe('cancelamento de giro', () => {
+  it('restaura RENOMEADO após direita e esquerda', () => {
+    const original = doc({ renameState: 'RENOMEADO', rotationDegrees: 0 })
+    const pending = rotateDocumentManually(original, 'RIGHT')
+    expect(pending.renameState).toBe('NAO_RENOMEADO')
+    const cancelled = rotateDocumentManually(pending, 'LEFT')
+    expect(cancelled.renameState).toBe('RENOMEADO')
+    expect(cancelled.rotationEditBaseline).toBeUndefined()
+  })
+
+  it('restaura estado e erro anteriores após uma volta completa', () => {
+    let document = doc({ renameState: 'ERRO', lastRenameError: 'Destino ocupado', rotationDegrees: 90 })
+    for (let i = 0; i < 4; i++) document = rotateDocumentManually(document, 'LEFT')
+    expect(document.rotationDegrees).toBe(90)
+    expect(document.renameState).toBe('ERRO')
+    expect(document.lastRenameError).toBe('Destino ocupado')
+  })
+
+  it('não restaura RENOMEADO se o nome proposto mudou durante o giro', () => {
+    const pending = rotateDocumentManually(doc({ renameState: 'RENOMEADO' }), 'RIGHT')
+    const cancelled = rotateDocumentManually({ ...pending, suggestedName: '000999_DT.jpg' }, 'LEFT')
+    expect(cancelled.renameState).toBe('NAO_RENOMEADO')
+  })
+
+  it('não promove documento sem estado anterior para RENOMEADO', () => {
+    const pending = rotateDocumentManually(doc(), 'RIGHT')
+    expect(rotateDocumentManually(pending, 'LEFT').renameState).toBeUndefined()
+  })
+})
