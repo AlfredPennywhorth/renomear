@@ -110,7 +110,7 @@ describe('rótulos impressos', () => {
       { text: '000123', bbox },
     ] }] }] }] }
     expect(findLabeledProntuarioBox(layout)).toEqual(bbox)
-    expect(findLabeledProntuarioBox({ blocks: [...layout.blocks, ...layout.blocks] })).toBeNull()
+    expect(findLabeledProntuarioBox({ blocks: [...layout.blocks, ...layout.blocks] })).toBe('AMBIGUOUS')
   })
 
   it('não escolhe data ou CPF no lugar de prontuário', () => {
