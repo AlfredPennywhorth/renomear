@@ -255,7 +255,7 @@ export async function analyzeDocumentsWithLocalOcr(
               preferCalibrated(
                 calibrated.numeroDocumento,
                 calibratedConfidence.numeroDocumento,
-                fields.numeroDocumento ?? current.numeroDocumento,
+                fields.numeroDocumento,
               ) ?? null
             )
         const documentDate = preferCalibrated(
