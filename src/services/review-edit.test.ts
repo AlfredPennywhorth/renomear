@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AnalyzedDocument } from '../domain/document'
-import { sequencePatchFromManualEdit, shouldInvalidateRenameState } from './review-edit'
+import { sequencePatchFromManualEdit, shouldInvalidateRenameState, rotateDocumentManually } from './review-edit'
 
 function doc(overrides: Partial<AnalyzedDocument> = {}): AnalyzedDocument {
   return {
@@ -67,5 +67,36 @@ describe('shouldInvalidateRenameState', () => {
       { prontuario: '001072' },
       '001072_003604_DT.jpg',
     )).toBe(false)
+  })
+})
+
+
+describe('giro manual', () => {
+  it('gira nos dois sentidos e completa uma volta sem alterar a identidade', () => {
+    const original = doc({ rotationDegrees: 0 })
+    expect(rotateDocumentManually(original, 'LEFT').rotationDegrees).toBe(270)
+    let rotated = original
+    for (let i = 0; i < 4; i++) rotated = rotateDocumentManually(rotated, 'RIGHT')
+    expect(rotated.rotationDegrees).toBe(0)
+    expect(rotated.prontuario).toBe(original.prontuario)
+    expect(rotated.prontuarioConfidence).toBe(original.prontuarioConfidence)
+  })
+
+  it('invalida aprovação e renomeação anterior, resolve só o alerta de orientação', () => {
+    const rotated = rotateDocumentManually(doc({
+      renameState: 'RENOMEADO', manualReviewApproved: true,
+      validations: [
+        { id: 'ocr-orientation-uncertain', label: '', value: null, status: 'REVISAR' },
+        { id: 'ocr-prontuario-conflict', label: '', value: null, status: 'REVISAR' },
+      ],
+    }), 'RIGHT')
+    expect(rotated.renameState).toBe('NAO_RENOMEADO')
+    expect(rotated.manualReviewApproved).toBe(false)
+    expect(rotated.validations.some(v => v.id === 'ocr-orientation-uncertain')).toBe(false)
+    expect(rotated.validations.some(v => v.id === 'ocr-prontuario-conflict')).toBe(true)
+  })
+
+  it('preserva não conformidade', () => {
+    expect(rotateDocumentManually(doc({ reviewStatus: 'NAO_CONFORME' }), 'RIGHT').reviewStatus).toBe('NAO_CONFORME')
   })
 })
