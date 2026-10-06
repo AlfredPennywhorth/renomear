@@ -33,3 +33,11 @@ C - Mensal R$ 800,00
     expect(result.isMonthly).toBe(true)
   })
 })
+
+
+it('classifica formulários por sinais redundantes sem depender do título', () => {
+  expect(extractOcrFields('Caso de (assinale com x) Consideração (assinale com x) Atenderá (assinale x)').kind)
+    .toBe('FICHA_C1')
+  expect(extractOcrFields('PIEDADE - SETOR CENTRO Para fins de trânsito Via Almoxarifado SAÍDA').kind)
+    .toBe('DECLARACAO_TRANSITO')
+})
