@@ -55,10 +55,10 @@ export function rotateDocumentManually(
     renameState: canRestore ? baseline.renameState : 'NAO_RENOMEADO',
     lastRenameError: canRestore ? baseline.lastRenameError : null,
     validations: [
-      ...document.validations.filter(item => item.id !== 'ocr-orientation' && item.id !== 'ocr-orientation-uncertain'),
+      ...document.validations.filter(item => item.id !== 'ocr-orientation' && item.id !== 'ocr-orientation-uncertain' && item.id !== 'manual-orientation-review'),
       {
-        id: 'ocr-orientation', label: 'Orientação ajustada manualmente',
-        value: rotation + '°', status: 'OK',
+        id: 'manual-orientation-review', label: 'Conferência após giro manual',
+        value: rotation + '°', status: 'REVISAR',
         note: 'Confira os campos após o giro. A imagem será gravada nesta orientação após confirmar a renomeação.',
       },
     ],
