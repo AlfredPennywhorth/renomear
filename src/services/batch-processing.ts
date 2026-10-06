@@ -158,6 +158,7 @@ export function isAutomaticRenameReady(document: AnalyzedDocument): boolean {
     (item) =>
       (
         item.id === 'ocr-error' ||
+        item.id === 'ocr-prontuario-ambiguous' ||
         item.id === 'ocr-prontuario-conflict' ||
         item.id === 'ocr-identity-confidence' ||
         item.id === 'ocr-paddle-unavailable' ||
