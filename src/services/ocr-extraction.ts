@@ -15,6 +15,7 @@ function normalizeText(value: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toUpperCase()
+    .replace(/[\r\n]+/g, ' ')
 }
 
 function firstMatch(text: string, patterns: RegExp[]): string | null {
@@ -91,13 +92,21 @@ export function extractOcrFields(rawText: string, expectedGroup: ExpectedGroup =
     ...(expectedGroup === 'ENVELOPE_RECIBO' ? [/\bSEQ[A-Z]*\s*[:#-]?\s*([0-9OIL \t]{4,10})\b/, /\b(?:N|NUM)\b.*\s+([0-9OIL \t]{4,10})\b/] : []),
   ])
 
-  const fixOcrTypos = (val: string | null) => 
-    val ? val.replace(/\s+/g, '').replace(/O/g, '0').replace(/[IL]/g, '1') : null
+  const fixOcrTypos = (val: string | null) => {
+    if (!val) return null
+    const cleaned = val.replace(/\s+/g, '').replace(/O/g, '0').replace(/[IL]/g, '1')
+    return cleaned.length > 0 ? cleaned : null
+  }
 
   const cleanProntuarioRaw = fixOcrTypos(prontuarioRaw)
   const cleanSequenceRaw = fixOcrTypos(sequenceRaw)
 
   let sequence = cleanSequenceRaw
+  // Se a sequência limpa tiver menos de 4 dígitos (ex: o OCR leu "0        "), é um falso positivo do regex
+  if (sequence && sequence.length < 4) {
+    sequence = null
+  }
+
   if (sequence && sequence.length < 6) {
     if (kind === 'RECIBO_EMERGENCIA_MANUAL' || kind === 'NAO_PADRONIZADO' || expectedGroup === 'ENVELOPE_RECIBO') {
       sequence = sequence.padStart(6, '0')
