@@ -74,14 +74,29 @@ export function extractOcrFields(rawText: string, expectedGroup: ExpectedGroup =
   const text = normalizeText(rawText)
   const kind = classify(rawText, expectedGroup)
 
-  const prontuarioRaw = firstMatch(text, [
+  const meetingDate = firstMatch(text, [
+    /DATA\s+(?:DA\s+)?REUNIAO\s*[:#-]?\s*(\d{2}[\/.\-]\d{2}[\/.\-]\d{2,4})/,
+  ])
+
+  const allDates = [...text.matchAll(/\b\d{2}[\/.\-]\d{2}[\/.\-]\d{2,4}\b/g)]
+    .map((match) => match[0].replaceAll('.', '/').replaceAll('-', '/'))
+  const uniqueDates = [...new Set(allDates)]
+  const normalizedDate = meetingDate
+    ? meetingDate.replaceAll('.', '/').replaceAll('-', '/')
+    : uniqueDates.length === 1
+      ? uniqueDates[0]
+      : null
+
+  const textWithoutDates = text.replace(/\b\d{2}[\/.\-]\d{2}[\/.\-]\d{2,4}\b/g, '  ')
+
+  const prontuarioRaw = firstMatch(textWithoutDates, [
     /PRONTUARIO\s*(?:N(?:O|º|°)\.?\s*)?[:#-]?\s*([0-9OIL \t]{1,10})\b/,
     /PRONT\.?\s*(?:N(?:O|º|°)\.?\s*)?[:#-]?\s*([0-9OIL \t]{1,10})\b/,
     // Relaxed fallback if we are sure it's a known group
     ...(expectedGroup !== 'TODOS' ? [/\b(?:PRO|PRON)[A-Z]*\s*(?:N(?:O|º|°)\.?\s*)?[:#-]?\s*([0-9OIL \t]{1,10})\b/] : []),
   ])
 
-  const sequenceRaw = firstMatch(text, [
+  const sequenceRaw = firstMatch(textWithoutDates, [
     ...(kind === 'DECLARACAO_TRANSITO'
       ? [/(?:^|\W|\d)N(?:O|º|°|P)?\s*[:#-]?\s*([0-9OIL \t]{6,10})\b/]
       : []),
@@ -115,25 +130,12 @@ export function extractOcrFields(rawText: string, expectedGroup: ExpectedGroup =
     // If it's more than 6 digits, we might want to flag it or just return it as is so validation catches it.
   }
 
-  const meetingDate = firstMatch(text, [
-    /DATA\s+(?:DA\s+)?REUNIAO\s*[:#-]?\s*(\d{2}[\/.\-]\d{2}[\/.\-]\d{2,4})/,
-  ])
-
-  const allDates = [...text.matchAll(/\b\d{2}[\/.\-]\d{2}[\/.\-]\d{2,4}\b/g)]
-    .map((match) => match[0].replaceAll('.', '/').replaceAll('-', '/'))
-  const uniqueDates = [...new Set(allDates)]
-  const normalizedDate = meetingDate
-    ? meetingDate.replaceAll('.', '/').replaceAll('-', '/')
-    : uniqueDates.length === 1
-      ? uniqueDates[0]
-      : null
-
   return {
     kind,
-    prontuario: prontuarioRaw ? normalizeProntuario(prontuarioRaw) : null,
+    prontuario: cleanProntuarioRaw ? normalizeProntuario(cleanProntuarioRaw) : null,
     numeroDocumento: sequence,
     documentDate: normalizedDate,
-    caseMode: null,
-    isMonthly: /\bMENSAL\b/.test(text),
+    caseMode: text.includes('CASO NOVO') ? 'NOVO' : text.includes('CASO DE RETORNO') ? 'RETORNO' : null,
+    isMonthly: /C\s*-\s*MENSAL/.test(text) || /MENSAL\s*R\$/.test(text),
   }
 }
