@@ -1,0 +1,136 @@
+import { describe, expect, it, vi, afterEach } from 'vitest'
+import { classifyKnownHeader, scoreKnownHeader, chooseDocumentOrientation, detectDocumentOrientation, findLabeledProntuarioBox } from './document-calibration'
+
+describe('scoreKnownHeader', () => {
+  it('reconhece cabeçalho de ficha C1', () => {
+    expect(scoreKnownHeader('FICHA DE APRESENTAÇÃO DE CASO')).toBeGreaterThan(0)
+  })
+
+  it('reconhece cabeçalho de declaração de trânsito', () => {
+    expect(scoreKnownHeader('CONGREGAÇÃO CRISTÃ NO BRASIL\nDeclaração de trânsito')).toBeGreaterThan(8)
+  })
+
+  it('não pontua texto sem sinais conhecidos', () => {
+    expect(scoreKnownHeader('arquivo digitalizado sem cabeçalho reconhecível')).toBe(0)
+  })
+})
+
+describe('classifyKnownHeader', () => {
+  it('classifica C1 frente pelo cabeçalho fixo', () => {
+    expect(classifyKnownHeader('CONGREGAÇÃO CRISTÃ NO BRASIL\nFICHA DE APRESENTAÇÃO DE CASO'))
+      .toBe('FICHA_C1')
+  })
+
+  it('classifica verso/pedido de roupas pelo título', () => {
+    expect(classifyKnownHeader('PEDIDO DE ROUPAS E DIVERSOS')).toBe('FICHA_C1_VERSO')
+  })
+
+  it('classifica declaração de trânsito', () => {
+    expect(classifyKnownHeader('CONGREGAÇÃO CRISTÃ NO BRASIL\nDECLARAÇÃO DE TRÂNSITO'))
+      .toBe('DECLARACAO_TRANSITO')
+  })
+
+  it('classifica envelope pelo bloco da reunião', () => {
+    expect(classifyKnownHeader('OBRA DA PIEDADE\nPREENCHIDO NA REUNIÃO\nDATA DA REUNIÃO\nSEQUÊNCIA'))
+      .toBe('ENVELOPE')
+  })
+})
+
+
+describe('orientação segura', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it.each([0, 90, 180, 270] as const)('seleciona %s° com título inequívoco', (rotation) => {
+    const headerText = 'FICHA DE APRESENTAÇÃO DE CASO'
+    expect(chooseDocumentOrientation([
+      { rotation, score: scoreKnownHeader(headerText), headerText },
+      { rotation: rotation === 0 ? 90 : 0, score: 0, headerText: '' },
+    ])?.rotation).toBe(rotation)
+  })
+
+  it('recusa empate e cabeçalho institucional genérico', () => {
+    const headerText = 'DECLARAÇÃO DE TRÂNSITO'
+    expect(chooseDocumentOrientation([
+      { rotation: 0, score: 8, headerText },
+      { rotation: 180, score: 8, headerText },
+    ])).toBeNull()
+    expect(chooseDocumentOrientation([
+      { rotation: 0, score: 5, headerText: 'CONGREGAÇÃO CRISTÃ NO BRASIL' },
+    ])).toBeNull()
+  })
+
+  function canvas() {
+    return { width: 600, height: 850, getContext: () => ({
+      fillRect() {}, translate() {}, rotate() {}, drawImage() {},
+    }) } as unknown as HTMLCanvasElement
+  }
+
+  it.each([0, 90, 180, 270] as const)('usa página inteira quando o título de %s° fica fora do topo', async (rotation) => {
+    vi.stubGlobal('document', { createElement: () => canvas() })
+    let call = 0
+    const worker = {
+      setParameters: vi.fn(),
+      recognize: vi.fn(async () => {
+        const index = call++
+        return { data: { text: index === 4 + rotation / 90 ? 'DECLARAÇÃO DE TRÂNSITO' : '' } }
+      }),
+    }
+    const result = await detectDocumentOrientation(worker as never, canvas())
+    expect(result.certain).toBe(true)
+    expect(result.rotation).toBe(rotation)
+    expect(worker.recognize).toHaveBeenCalledTimes(8)
+  })
+
+  it('preserva a imagem sem afirmar 0° quando não há evidência', async () => {
+    vi.stubGlobal('document', { createElement: () => canvas() })
+    const source = canvas()
+    const worker = { setParameters: vi.fn(), recognize: vi.fn(async () => ({ data: { text: '' } })) }
+    const result = await detectDocumentOrientation(worker as never, source)
+    expect(result.certain).toBe(false)
+    expect(result.canvas).toBe(source)
+  })
+})
+
+
+describe('rótulos impressos', () => {
+  it('orienta envelope pelos três rótulos sem depender do logotipo', () => {
+    const text = 'Prontuário Nº 000123\nData da Reunião 01/01/2026\nSequência 000456'
+    expect(classifyKnownHeader(text)).toBe('ENVELOPE')
+    expect(chooseDocumentOrientation([
+      { rotation: 90, score: scoreKnownHeader(text), headerText: text },
+      { rotation: 0, score: 0, headerText: '' },
+    ])?.rotation).toBe(90)
+  })
+
+  it('localiza número após rótulo e indicador Nº sem assumir posição no papel', () => {
+    const bbox = { x0: 200, y0: 450, x1: 300, y1: 480 }
+    const layout = { blocks: [{ paragraphs: [{ lines: [{ words: [
+      { text: 'Prontuário', bbox: { x0: 20, y0: 450, x1: 150, y1: 480 } },
+      { text: 'Nº', bbox: { x0: 160, y0: 450, x1: 180, y1: 480 } },
+      { text: '000123', bbox },
+    ] }] }] }] }
+    expect(findLabeledProntuarioBox(layout)).toEqual(bbox)
+    expect(findLabeledProntuarioBox({ blocks: [...layout.blocks, ...layout.blocks] })).toBe('AMBIGUOUS')
+  })
+
+  it('não escolhe data ou CPF no lugar de prontuário', () => {
+    const bbox = { x0: 0, y0: 0, x1: 20, y1: 20 }
+    for (const text of ['01/01/2026', '12345678901', 'ABC123']) {
+      expect(findLabeledProntuarioBox({ blocks: [{ paragraphs: [{ lines: [{ words: [
+        { text: 'Prontuário', bbox }, { text, bbox },
+      ] }] }] }] })).toBeNull()
+    }
+  })
+})
+
+
+it('bloqueia rótulos duplicados mesmo com números ilegíveis e aceita Nº:', () => {
+  const bbox = { x0: 0, y0: 0, x1: 20, y1: 20 }
+  const line = (texts: string[]) => ({ words: texts.map(text => ({ text, bbox })) })
+  const layout = (lines: ReturnType<typeof line>[]) => ({ blocks: [{ paragraphs: [{ lines }] }] })
+  expect(findLabeledProntuarioBox(layout([line(['Prontuário', 'Nº:', '000123'])]))).toEqual(bbox)
+  for (const digits of ['000123', 'ilegível']) {
+    expect(findLabeledProntuarioBox(layout([line(['Prontuário', digits]), line(['Prontuário', 'ilegível'])]))).toBe('AMBIGUOUS')
+  }
+  expect(findLabeledProntuarioBox(layout([line(['Prontuário', '000123', 'Prontuário', 'ilegível'])]))).toBe('AMBIGUOUS')
+})
