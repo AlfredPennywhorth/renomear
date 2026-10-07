@@ -74,24 +74,27 @@ export function extractOcrFields(rawText: string, expectedGroup: ExpectedGroup =
   const kind = classify(rawText, expectedGroup)
 
   const prontuarioRaw = firstMatch(text, [
-    /PRONTUARIO\s*(?:N(?:O|º|°)\.?\s*)?[:#-]?\s*(\d{1,6})\b/,
-    /PRONT\.?\s*(?:N(?:O|º|°)\.?\s*)?[:#-]?\s*(\d{1,6})\b/,
+    /PRONTUARIO\s*(?:N(?:O|º|°)\.?\s*)?[:#-]?\s*([\d\s]{1,10})\b/,
+    /PRONT\.?\s*(?:N(?:O|º|°)\.?\s*)?[:#-]?\s*([\d\s]{1,10})\b/,
     // Relaxed fallback if we are sure it's a known group
-    ...(expectedGroup !== 'TODOS' ? [/\b(?:PRO|PRON)[A-Z]*\s*(?:N(?:O|º|°)\.?\s*)?[:#-]?\s*(\d{1,6})\b/] : []),
+    ...(expectedGroup !== 'TODOS' ? [/\b(?:PRO|PRON)[A-Z]*\s*(?:N(?:O|º|°)\.?\s*)?[:#-]?\s*([\d\s]{1,10})\b/] : []),
   ])
 
   const sequenceRaw = firstMatch(text, [
     ...(kind === 'DECLARACAO_TRANSITO'
-      ? [/\bN(?:O|º|°)?\s*[:#-]?\s*(\d{6})\b/]
+      ? [/(?:^|\W|\d)N(?:O|º|°|P)?\s*[:#-]?\s*([\d\s]{6,10})\b/]
       : []),
-    /SEQUENCIA\s*[:#-]?\s*(\d{4,8})\b/,
-    /SEQ\.?\s*[:#-]?\s*(\d{4,8})\b/,
-    /(?:N[Oº°]|NUMERO)\s+(?:DO\s+)?DOCUMENTO\s*[:#-]?\s*(\d{4,8})\b/,
+    /SEQUENCIA\s*[:#-]?\s*([\d\s]{4,10})\b/,
+    /SEQ\.?\s*[:#-]?\s*([\d\s]{4,10})\b/,
+    /(?:N[Oº°]|NUMERO)\s+(?:DO\s+)?DOCUMENTO\s*[:#-]?\s*([\d\s]{4,10})\b/,
     // Relaxed fallback if we know it's envelope/recibo
-    ...(expectedGroup === 'ENVELOPE_RECIBO' ? [/\bSEQ[A-Z]*\s*[:#-]?\s*(\d{4,8})\b/, /\b(?:N|NUM)\b.*\s+(\d{4,8})\b/] : []),
+    ...(expectedGroup === 'ENVELOPE_RECIBO' ? [/\bSEQ[A-Z]*\s*[:#-]?\s*([\d\s]{4,10})\b/, /\b(?:N|NUM)\b.*\s+([\d\s]{4,10})\b/] : []),
   ])
 
-  let sequence = sequenceRaw
+  const cleanProntuarioRaw = prontuarioRaw ? prontuarioRaw.replace(/\s+/g, '') : null
+  const cleanSequenceRaw = sequenceRaw ? sequenceRaw.replace(/\s+/g, '') : null
+
+  let sequence = cleanSequenceRaw
   if (sequence && sequence.length < 6) {
     if (kind === 'RECIBO_EMERGENCIA_MANUAL' || kind === 'NAO_PADRONIZADO' || expectedGroup === 'ENVELOPE_RECIBO') {
       sequence = sequence.padStart(6, '0')
