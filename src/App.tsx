@@ -4,7 +4,7 @@ import DocumentReviewWorkspace from './components/DocumentReviewWorkspace'
 import HowToUse from './components/HowToUse'
 import QualityDashboard from './components/QualityDashboard'
 import SecurityNotice from './components/SecurityNotice'
-import type { AnalyzedDocument } from './domain/document'
+import type { AnalyzedDocument, ExpectedGroup } from './domain/document'
 import { listSupportedDocuments } from './services/local-files'
 import { analyzeBatch, isAutomaticRenameReady, isRenameReady, reconcileReviewStatus, summarizeBatch } from './services/batch-processing'
 import { analyzeDocumentsWithLocalOcr } from './services/local-ocr'
@@ -28,6 +28,7 @@ function App() {
   const [securityAccepted, setSecurityAccepted] = useState(false)
   const [batchCandidates, setBatchCandidates] = useState<AnalyzedDocument[]>([])
   const [activeView, setActiveView] = useState<'DOCUMENTOS' | 'DASHBOARD' | 'COMO_USAR'>('DOCUMENTOS')
+  const [expectedGroup, setExpectedGroup] = useState<ExpectedGroup>('TODOS')
 
   const selectedDocument = documents.find((document) => document.id === selectedId) ?? null
 
@@ -100,7 +101,7 @@ function App() {
     if (!directory || !selectedDocument || processingBusy) return
     setProcessingBusy(true)
     try {
-      const [read] = await analyzeDocumentsWithLocalOcr(directory, [selectedDocument], undefined, { useCurrentOrientation: true })
+      const [read] = await analyzeDocumentsWithLocalOcr(directory, [selectedDocument], undefined, { useCurrentOrientation: true, expectedGroup })
       if (read) updateDocument(analyzeBatch([read])[0])
       const failure = read?.validations.find(item => item.id === 'ocr-error' || item.id === 'ocr-empty-file')
       setMessage(failure
@@ -133,6 +134,7 @@ function App() {
             ': ' + progress.fileName + ' — ' + progress.status + percent,
           )
         },
+        { expectedGroup }
       )
       const analyzed = analyzeBatch(ocrAnalyzed)
       const summary = summarizeBatch(analyzed)
@@ -312,6 +314,24 @@ function App() {
                 </button>
               </>
             )}
+            
+            <div className="select-group" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+              <label htmlFor="expectedGroup" style={{ fontSize: '0.875rem' }}>Grupo esperado:</label>
+              <select 
+                id="expectedGroup"
+                value={expectedGroup}
+                onChange={(e) => setExpectedGroup(e.target.value as ExpectedGroup)}
+                disabled={processingBusy || renameBusy}
+                style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
+              >
+                <option value="TODOS">Automático (Todos)</option>
+                <option value="C1">C1 (Frente/Verso)</option>
+                <option value="ENVELOPE_RECIBO">Envelope / Recibo</option>
+                <option value="DT">Declaração de Trânsito (DT)</option>
+                <option value="DIVERSOS">Diversos (Não Padronizado)</option>
+              </select>
+            </div>
+
             <button type="button" onClick={selectFolder} disabled={busy || renameBusy || processingBusy || !securityAccepted}>
               {busy ? 'Lendo pasta…' : directory ? 'Trocar pasta' : 'Selecionar pasta'}
             </button>

@@ -1,5 +1,5 @@
 import { createWorker, OEM, PSM, type Worker } from 'tesseract.js'
-import type { AnalyzedDocument } from '../domain/document'
+import type { AnalyzedDocument, ExpectedGroup } from '../domain/document'
 import { suggestFileName } from './naming'
 import { extractOcrFields } from './ocr-extraction'
 import {
@@ -99,7 +99,7 @@ export async function analyzeDocumentsWithLocalOcr(
   directory: DirectoryHandleLike,
   documents: AnalyzedDocument[],
   onProgress?: (progress: OcrProgress) => void,
-  options: { useCurrentOrientation?: boolean } = {},
+  options: { useCurrentOrientation?: boolean; expectedGroup?: ExpectedGroup } = {},
 ): Promise<AnalyzedDocument[]> {
   if (documents.length === 0) return []
 
@@ -176,7 +176,7 @@ export async function analyzeDocumentsWithLocalOcr(
         })
         const result = await worker.recognize(oriented.canvas, {}, { blocks: true })
         const confidence = Number.isFinite(result.data.confidence) ? result.data.confidence : 0
-        const fields = extractOcrFields(result.data.text)
+        const fields = extractOcrFields(result.data.text, options.expectedGroup)
         const headerKind = classifyKnownHeader(oriented.headerText)
         const kind = current.kind ?? fields.kind ?? headerKind
         const calibrated = await extractCalibratedFields(worker, oriented.canvas, kind, result.data)

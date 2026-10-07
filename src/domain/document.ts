@@ -7,6 +7,8 @@ export type DocumentKind =
   | 'DECLARACAO_TRANSITO'
   | 'NAO_PADRONIZADO'
 
+export type ExpectedGroup = 'TODOS' | 'C1' | 'ENVELOPE_RECIBO' | 'DT' | 'DIVERSOS'
+
 export type CaseMode = 'REUNIAO' | 'EMERGENCIA'
 
 export type InkZoneStatus = 'AZUL' | 'VERMELHA' | 'OUTRA' | 'NAO_IDENTIFICADA'
