@@ -287,7 +287,7 @@ function App() {
         <header className="hero">
           <div>
             <p className="eyebrow">Processamento local</p>
-            <h1>Renomear <span style={{ fontSize: '0.8rem', color: '#666', fontWeight: 'normal' }}>v0.1.3</span></h1>
+            <h1>Renomear <span style={{ fontSize: '0.8rem', color: '#666', fontWeight: 'normal' }}>v0.1.4</span></h1>
             <p className="lede">
               Selecione uma pasta, confira os documentos encontrados e acompanhe a fila de validação.
               Os arquivos permanecem no seu computador.

@@ -135,7 +135,7 @@ export function extractOcrFields(rawText: string, expectedGroup: ExpectedGroup =
     prontuario: cleanProntuarioRaw ? normalizeProntuario(cleanProntuarioRaw) : null,
     numeroDocumento: sequence,
     documentDate: normalizedDate,
-    caseMode: text.includes('CASO NOVO') ? 'NOVO' : text.includes('CASO DE RETORNO') ? 'RETORNO' : null,
-    isMonthly: /C\s*-\s*MENSAL/.test(text) || /MENSAL\s*R\$/.test(text),
+    caseMode: null,
+    isMonthly: /\bMENSAL\b/.test(text),
   }
 }
