@@ -74,25 +74,28 @@ export function extractOcrFields(rawText: string, expectedGroup: ExpectedGroup =
   const kind = classify(rawText, expectedGroup)
 
   const prontuarioRaw = firstMatch(text, [
-    /PRONTUARIO\s*(?:N(?:O|º|°)\.?\s*)?[:#-]?\s*([0-9 \t]{1,10})\b/,
-    /PRONT\.?\s*(?:N(?:O|º|°)\.?\s*)?[:#-]?\s*([0-9 \t]{1,10})\b/,
+    /PRONTUARIO\s*(?:N(?:O|º|°)\.?\s*)?[:#-]?\s*([0-9OIL \t]{1,10})\b/,
+    /PRONT\.?\s*(?:N(?:O|º|°)\.?\s*)?[:#-]?\s*([0-9OIL \t]{1,10})\b/,
     // Relaxed fallback if we are sure it's a known group
-    ...(expectedGroup !== 'TODOS' ? [/\b(?:PRO|PRON)[A-Z]*\s*(?:N(?:O|º|°)\.?\s*)?[:#-]?\s*([0-9 \t]{1,10})\b/] : []),
+    ...(expectedGroup !== 'TODOS' ? [/\b(?:PRO|PRON)[A-Z]*\s*(?:N(?:O|º|°)\.?\s*)?[:#-]?\s*([0-9OIL \t]{1,10})\b/] : []),
   ])
 
   const sequenceRaw = firstMatch(text, [
     ...(kind === 'DECLARACAO_TRANSITO'
-      ? [/(?:^|\W|\d)N(?:O|º|°|P)?\s*[:#-]?\s*([0-9 \t]{6,10})\b/]
+      ? [/(?:^|\W|\d)N(?:O|º|°|P)?\s*[:#-]?\s*([0-9OIL \t]{6,10})\b/]
       : []),
-    /SEQUENCIA\s*[:#-]?\s*([0-9 \t]{4,10})\b/,
-    /SEQ\.?\s*[:#-]?\s*([0-9 \t]{4,10})\b/,
-    /(?:N[Oº°]|NUMERO)\s+(?:DO\s+)?DOCUMENTO\s*[:#-]?\s*([0-9 \t]{4,10})\b/,
+    /SEQUENCIA\s*[:#-]?\s*([0-9OIL \t]{4,10})\b/,
+    /SEQ\.?\s*[:#-]?\s*([0-9OIL \t]{4,10})\b/,
+    /(?:N[Oº°]|NUMERO)\s+(?:DO\s+)?DOCUMENTO\s*[:#-]?\s*([0-9OIL \t]{4,10})\b/,
     // Relaxed fallback if we know it's envelope/recibo
-    ...(expectedGroup === 'ENVELOPE_RECIBO' ? [/\bSEQ[A-Z]*\s*[:#-]?\s*([0-9 \t]{4,10})\b/, /\b(?:N|NUM)\b.*\s+([0-9 \t]{4,10})\b/] : []),
+    ...(expectedGroup === 'ENVELOPE_RECIBO' ? [/\bSEQ[A-Z]*\s*[:#-]?\s*([0-9OIL \t]{4,10})\b/, /\b(?:N|NUM)\b.*\s+([0-9OIL \t]{4,10})\b/] : []),
   ])
 
-  const cleanProntuarioRaw = prontuarioRaw ? prontuarioRaw.replace(/\s+/g, '') : null
-  const cleanSequenceRaw = sequenceRaw ? sequenceRaw.replace(/\s+/g, '') : null
+  const fixOcrTypos = (val: string | null) => 
+    val ? val.replace(/\s+/g, '').replace(/O/g, '0').replace(/[IL]/g, '1') : null
+
+  const cleanProntuarioRaw = fixOcrTypos(prontuarioRaw)
+  const cleanSequenceRaw = fixOcrTypos(sequenceRaw)
 
   let sequence = cleanSequenceRaw
   if (sequence && sequence.length < 6) {

@@ -245,7 +245,8 @@ export async function detectDocumentOrientation(
 }
 
 function digitsOnly(value: string): string {
-  return value.replace(/\D/g, '')
+  const normalized = value.replace(/[Oo]/g, '0').replace(/[Il]/g, '1')
+  return normalized.replace(/\D/g, '')
 }
 
 function sixDigitCandidateFromRecognition(result: {
@@ -255,15 +256,17 @@ function sixDigitCandidateFromRecognition(result: {
     words?: Array<{ text: string; confidence: number }>
   }
 }): { value: string | null; confidence: number } {
-  const word = result.data.words?.find((item) => /^\d{6}$/.test(item.text.replace(/\D/g, '')))
+  const fixTypos = (v: string) => v.replace(/[Oo]/g, '0').replace(/[Il]/g, '1')
+  const word = result.data.words?.find((item) => /^\d{6}$/.test(fixTypos(item.text).replace(/\D/g, '')))
   if (word) {
     return {
-      value: word.text.replace(/\D/g, ''),
+      value: fixTypos(word.text).replace(/\D/g, ''),
       confidence: word.confidence,
     }
   }
 
-  const match = result.data.text.match(/(?:^|\D)(\d{6})(?:\D|$)/)
+  const fixedText = fixTypos(result.data.text)
+  const match = fixedText.match(/(?:^|\D)(\d{6})(?:\D|$)/)
   return {
     value: match?.[1] ?? null,
     confidence: match ? result.data.confidence : 0,
